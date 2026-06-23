@@ -163,6 +163,33 @@ header.app-header p {
   background-color: var(--gold-500);
 }
 
+@media (max-width: 480px) {
+  .stepper-container {
+    margin-bottom: 1.5rem;
+    padding: 0 0.5rem;
+  }
+
+  .step-label {
+    display: none;
+  }
+
+  .step-item.active .step-label {
+    display: block;
+    font-size: 0.8rem;
+  }
+
+  .step-badge {
+    width: 28px;
+    height: 28px;
+    font-size: 0.8rem;
+  }
+
+  .step-line {
+    margin: 0 0.5rem;
+    max-width: 40px;
+  }
+}
+
 /* Form Layout Grid */
 .form-layout-grid {
   display: grid;
