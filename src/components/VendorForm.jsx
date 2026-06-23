@@ -1,7 +1,6 @@
 import React, { useState, useRef } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { 
-  User, 
-  Phone, 
   Upload, 
   ArrowRight, 
   ArrowLeft, 
@@ -14,6 +13,13 @@ import {
 } from 'lucide-react';
 import { supabase, isSupabaseConfigured, mockDb } from '../supabaseClient';
 import LivePreview from './LivePreview';
+
+// Animation variants for step transitions
+const stepVariants = {
+  initial: { opacity: 0, x: 20 },
+  animate: { opacity: 1, x: 0 },
+  exit: { opacity: 0, x: -20 }
+};
 
 export default function VendorForm() {
   const [step, setStep] = useState(1);
@@ -260,11 +266,11 @@ export default function VendorForm() {
         <div className="form-layout-grid">
           {/* Form Side */}
           <div className="form-panel">
-            <form onSubmit={handleSubmit}>
-              
+             <form onSubmit={handleSubmit}>
+              <AnimatePresence mode="wait">
               {/* STEP 1: VENDOR PROFILE */}
               {step === 1 && (
-                <div>
+                <motion.div key="step1" variants={stepVariants} initial="initial" animate="animate" exit="exit" transition={{ duration: 0.25 }}>
                   <h2 className="panel-title">Tell us about your brand</h2>
                   <p style={{ color: 'var(--slate-500)', fontSize: '0.9rem', marginBottom: '1.5rem' }}>
                     Let's start with your vendor details. This information will display to customers on the event page.
@@ -346,12 +352,12 @@ export default function VendorForm() {
                       </div>
                     )}
                   </div>
-                </div>
+                </motion.div>
               )}
 
               {/* STEP 2: CHOOSE PROMOTION TYPE */}
               {step === 2 && (
-                <div>
+                <motion.div key="step2" variants={stepVariants} initial="initial" animate="animate" exit="exit" transition={{ duration: 0.25 }}>
                   <h2 className="panel-title">Choose Promotion Types</h2>
                   <p style={{ color: 'var(--slate-500)', fontSize: '0.9rem', marginBottom: '1.5rem' }}>
                     Select how you want customers to interact with your brand. You can participate in one or both!
@@ -399,12 +405,12 @@ export default function VendorForm() {
                       {validationErrors.promotionSelection}
                     </div>
                   )}
-                </div>
+                </motion.div>
               )}
 
               {/* STEP 3: CONFIGURE PROMOTION DETAILS */}
               {step === 3 && (
-                <div>
+                <motion.div key="step3" variants={stepVariants} initial="initial" animate="animate" exit="exit" transition={{ duration: 0.25 }}>
                   <h2 className="panel-title">Configure your offers</h2>
                   <p style={{ color: 'var(--slate-500)', fontSize: '0.9rem', marginBottom: '1.5rem' }}>
                     Enter the specific discount amounts or scratch prizes for your selected promotions.
@@ -520,8 +526,9 @@ export default function VendorForm() {
                       {error}
                     </div>
                   )}
-                </div>
+                </motion.div>
               )}
+              </AnimatePresence>
 
               {/* Navigation Buttons */}
               <div className="nav-buttons-container">
@@ -576,10 +583,20 @@ export default function VendorForm() {
         </div>
       ) : (
         /* STEP 4: SUCCESS CONFIRMATION SCREEN */
-        <div className="form-panel success-card">
-          <div className="success-icon-wrapper">
+        <motion.div 
+          className="form-panel success-card"
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ type: 'spring', stiffness: 200, damping: 20 }}
+        >
+          <motion.div 
+            className="success-icon-wrapper"
+            initial={{ scale: 0 }}
+            animate={{ scale: 1 }}
+            transition={{ type: 'spring', stiffness: 300, damping: 15, delay: 0.2 }}
+          >
             <CheckCircle2 size={40} />
-          </div>
+          </motion.div>
           <h2 className="success-title">We've received your details!</h2>
           <p className="success-subtitle">
             Thank you for participating in the Wanita Itu event promotions. Your promotional offers are successfully configured and our customer app will showcase them.
@@ -633,7 +650,7 @@ export default function VendorForm() {
           >
             Submit Another Vendor Form
           </button>
-        </div>
+        </motion.div>
       )}
     </div>
   );
