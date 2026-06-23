@@ -41,6 +41,8 @@ export default function VendorForm() {
 
   const [joinScratchWin, setJoinScratchWin] = useState(false);
   const [scratchWinPrize, setScratchWinPrize] = useState('');
+  const [scratchWinLimitType, setScratchWinLimitType] = useState('unlimited'); // 'unlimited' or 'limited'
+  const [scratchWinLimitValue, setScratchWinLimitValue] = useState('');
 
   // Drag and drop state
   const [dragActive, setDragActive] = useState(false);
@@ -136,6 +138,14 @@ export default function VendorForm() {
         if (!scratchWinPrize.trim()) {
           errors.scratchWinPrize = 'Prize description is required';
         }
+
+        if (scratchWinLimitType === 'limited') {
+          if (!scratchWinLimitValue) {
+            errors.scratchWinLimitValue = 'Limit amount is required';
+          } else if (isNaN(scratchWinLimitValue) || parseInt(scratchWinLimitValue) <= 0) {
+            errors.scratchWinLimitValue = 'Please enter a valid positive number';
+          }
+        }
       }
     }
 
@@ -212,7 +222,9 @@ export default function VendorForm() {
         coupon_limit_type: joinCoupon ? couponLimitType : null,
         coupon_limit_value: (joinCoupon && couponLimitType === 'limited') ? parseInt(couponLimitValue) : null,
         join_scratch_win: joinScratchWin,
-        scratch_win_prize: joinScratchWin ? scratchWinPrize : null
+        scratch_win_prize: joinScratchWin ? scratchWinPrize : null,
+        scratch_win_limit_type: joinScratchWin ? scratchWinLimitType : null,
+        scratch_win_limit_value: (joinScratchWin && scratchWinLimitType === 'limited') ? parseInt(scratchWinLimitValue) : null
       };
 
       // Save payload
@@ -517,6 +529,41 @@ export default function VendorForm() {
                         />
                         {validationErrors.scratchWinPrize && <div className="auth-error"><AlertCircle size={14} style={{ display: 'inline', marginRight: '4px', verticalAlign: 'middle' }} />{validationErrors.scratchWinPrize}</div>}
                       </div>
+
+                      <div className="form-group">
+                        <label className="form-label">Prize Limit</label>
+                        <div className="options-button-group">
+                          <button 
+                            type="button"
+                            className={`option-btn ${scratchWinLimitType === 'unlimited' ? 'active' : ''}`}
+                            onClick={() => setScratchWinLimitType('unlimited')}
+                          >
+                            Unlimited Winners
+                          </button>
+                          <button 
+                            type="button"
+                            className={`option-btn ${scratchWinLimitType === 'limited' ? 'active' : ''}`}
+                            onClick={() => setScratchWinLimitType('limited')}
+                          >
+                            Set Limit
+                          </button>
+                        </div>
+                      </div>
+
+                      {scratchWinLimitType === 'limited' && (
+                        <div className="form-group">
+                          <label className="form-label" htmlFor="scratchWinLimitValue">Maximum Number of Winners *</label>
+                          <input 
+                            type="number"
+                            id="scratchWinLimitValue"
+                            className="form-input"
+                            placeholder="E.g., 50"
+                            value={scratchWinLimitValue}
+                            onChange={(e) => setScratchWinLimitValue(e.target.value)}
+                          />
+                          {validationErrors.scratchWinLimitValue && <div className="auth-error"><AlertCircle size={14} style={{ display: 'inline', marginRight: '4px', verticalAlign: 'middle' }} />{validationErrors.scratchWinLimitValue}</div>}
+                        </div>
+                      )}
                     </div>
                   )}
 
@@ -579,6 +626,8 @@ export default function VendorForm() {
             couponLimitValue={couponLimitValue}
             joinScratchWin={joinScratchWin}
             scratchWinPrize={scratchWinPrize}
+            scratchWinLimitType={scratchWinLimitType}
+            scratchWinLimitValue={scratchWinLimitValue}
           />
         </div>
       ) : (
@@ -628,6 +677,14 @@ export default function VendorForm() {
                 </span>
               </div>
             )}
+            {joinScratchWin && (
+              <div className="success-summary-item">
+                <span className="success-summary-label">Prize Limit:</span>
+                <span className="success-summary-value">
+                  {scratchWinLimitType === 'unlimited' ? 'Unlimited Winners' : `First ${scratchWinLimitValue} winners`}
+                </span>
+              </div>
+            )}
           </div>
 
           <button 
@@ -646,6 +703,8 @@ export default function VendorForm() {
               setCouponLimitValue('');
               setJoinScratchWin(false);
               setScratchWinPrize('');
+              setScratchWinLimitType('unlimited');
+              setScratchWinLimitValue('');
             }}
           >
             Submit Another Vendor Form

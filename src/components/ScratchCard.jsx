@@ -2,7 +2,7 @@ import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Sparkles, RotateCcw } from 'lucide-react';
 
-const SCRATCH_THRESHOLD = 0.45; // 45% scratched to auto-reveal
+const SCRATCH_THRESHOLD = 0.25; // 25% scratched to auto-reveal
 
 export default function ScratchCard({ 
   vendorName = 'Your Brand', 
@@ -12,9 +12,7 @@ export default function ScratchCard({
   onReveal
 }) {
   const canvasRef = useRef(null);
-  const [isScratching, setIsScratching] = useState(false);
   const [isRevealed, setIsRevealed] = useState(false);
-  const [scratchPercent, setScratchPercent] = useState(0);
   const isDrawing = useRef(false);
   const lastPoint = useRef(null);
 
@@ -24,13 +22,17 @@ export default function ScratchCard({
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
 
-    // Scale for high-DPI displays
+    // Scale for high-DPI displays. After this, all draw coords use CSS pixels.
     const dpr = window.devicePixelRatio || 1;
     canvas.width = width * dpr;
     canvas.height = height * dpr;
     canvas.style.width = `${width}px`;
     canvas.style.height = `${height}px`;
+    ctx.setTransform(1, 0, 0, 1, 0, 0); // reset any prior transform
     ctx.scale(dpr, dpr);
+
+    // Make sure we paint the overlay (not erase it)
+    ctx.globalCompositeOperation = 'source-over';
 
     // Draw the scratch-off overlay (golden metallic gradient)
     const gradient = ctx.createLinearGradient(0, 0, width, height);
@@ -54,69 +56,65 @@ export default function ScratchCard({
 
     // Add text instruction
     ctx.fillStyle = 'rgba(120, 80, 20, 0.6)';
-    ctx.font = `bold ${14}px system-ui, -apple-system, sans-serif`;
+    ctx.font = 'bold 14px system-ui, -apple-system, sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText('Gores Di Sini!', width / 2, height / 2 - 10);
 
     // Finger / touch icon hint
-    ctx.font = `${24}px system-ui`;
+    ctx.font = '24px system-ui';
     ctx.fillText('👆', width / 2, height / 2 + 18);
-
-    // Set composite operation for scratching
-    ctx.globalCompositeOperation = 'destination-out';
   }, [width, height]);
 
   useEffect(() => {
     if (!isRevealed) {
       initCanvas();
-      setScratchPercent(0);
-      setIsScratching(false);
     }
   }, [initCanvas, isRevealed, prize]);
 
-  // Calculate scratched percentage
-  const calcScratchPercent = useCallback(() => {
+  // Calculate scratched fraction (0..1) by sampling the alpha channel
+  const calcScratchFraction = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas) return 0;
     const ctx = canvas.getContext('2d');
     const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
     const pixels = imageData.data;
     let transparent = 0;
-    // Check alpha channel every 4th pixel for performance
-    for (let i = 3; i < pixels.length; i += 16) {
+    let total = 0;
+    // Sample every 16th pixel (stride of 64 bytes) for performance
+    for (let i = 3; i < pixels.length; i += 64) {
+      total++;
       if (pixels[i] === 0) transparent++;
     }
-    return transparent / (pixels.length / 16);
+    return total ? transparent / total : 0;
   }, []);
 
-  // Scratch at a point
+  // Scratch at a point (coords are in CSS pixels; the ctx transform handles DPR)
   const scratch = useCallback((x, y) => {
     const canvas = canvasRef.current;
     if (!canvas || isRevealed) return;
     const ctx = canvas.getContext('2d');
-    const dpr = window.devicePixelRatio || 1;
 
     ctx.globalCompositeOperation = 'destination-out';
-    ctx.lineWidth = 30 * dpr;
+    ctx.lineWidth = 50;
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
 
     if (lastPoint.current) {
       ctx.beginPath();
-      ctx.moveTo(lastPoint.current.x * dpr, lastPoint.current.y * dpr);
-      ctx.lineTo(x * dpr, y * dpr);
+      ctx.moveTo(lastPoint.current.x, lastPoint.current.y);
+      ctx.lineTo(x, y);
       ctx.stroke();
     } else {
       ctx.beginPath();
-      ctx.arc(x * dpr, y * dpr, 15 * dpr, 0, Math.PI * 2);
+      ctx.arc(x, y, 25, 0, Math.PI * 2);
       ctx.fill();
     }
 
     lastPoint.current = { x, y };
   }, [isRevealed]);
 
-  // Get coordinates relative to canvas
+  // Get coordinates relative to canvas (CSS pixels)
   const getCoords = (e) => {
     const canvas = canvasRef.current;
     if (!canvas) return { x: 0, y: 0 };
@@ -131,12 +129,18 @@ export default function ScratchCard({
     };
   };
 
+  const maybeReveal = () => {
+    if (calcScratchFraction() >= SCRATCH_THRESHOLD) {
+      setIsRevealed(true);
+      onReveal?.();
+    }
+  };
+
   const handleStart = (e) => {
     if (isRevealed) return;
     e.preventDefault();
     isDrawing.current = true;
     lastPoint.current = null;
-    setIsScratching(true);
     const { x, y } = getCoords(e);
     scratch(x, y);
   };
@@ -146,26 +150,18 @@ export default function ScratchCard({
     e.preventDefault();
     const { x, y } = getCoords(e);
     scratch(x, y);
+    maybeReveal();
   };
 
   const handleEnd = () => {
     if (!isDrawing.current) return;
     isDrawing.current = false;
     lastPoint.current = null;
-
-    const pct = calcScratchPercent();
-    setScratchPercent(pct);
-
-    if (pct >= SCRATCH_THRESHOLD) {
-      setIsRevealed(true);
-      onReveal?.();
-    }
+    maybeReveal();
   };
 
   const handleReset = () => {
     setIsRevealed(false);
-    setScratchPercent(0);
-    setIsScratching(false);
     lastPoint.current = null;
   };
 
@@ -284,7 +280,7 @@ export default function ScratchCard({
         </AnimatePresence>
       </div>
 
-      {/* Progress / Reset bar */}
+      {/* Hint / Reset bar */}
       <div style={{ 
         display: 'flex', 
         justifyContent: 'space-between', 
@@ -314,7 +310,7 @@ export default function ScratchCard({
             Reset Card
           </button>
         ) : (
-          <span>{isScratching ? `${Math.round(scratchPercent * 100)}% scratched` : 'Scratch the gold area above!'}</span>
+          <span>Scratch the gold area above!</span>
         )}
         <span style={{ fontWeight: 600, color: '#e11d48', fontSize: '0.65rem' }}>PREVIEW</span>
       </div>

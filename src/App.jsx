@@ -1,12 +1,15 @@
 import React, { useState, useEffect } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
 import { ShieldAlert, LogIn } from 'lucide-react';
 import VendorForm from './components/VendorForm';
 import AdminDashboard from './components/AdminDashboard';
+import WelcomePage from './components/WelcomePage';
 import { isSupabaseConfigured } from './supabaseClient';
 
 function App() {
   const [currentPath, setCurrentPath] = useState(window.location.pathname);
   const [currentHash, setCurrentHash] = useState(window.location.hash);
+  const [showWelcome, setShowWelcome] = useState(true);
 
   // Monitor URL change for simple client-side routing
   useEffect(() => {
@@ -34,40 +37,48 @@ function App() {
 
   return (
     <div className="app-container">
-      {/* Header section */}
-      <header className="app-header">
-        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.5rem' }}>
-          <img 
-            src="https://images.lumacdn.com/cdn-cgi/image/format=auto,fit=cover,dpr=2,anim=false,background=white,quality=75,width=112,height=112/uploads/2k/cdbbdd52-317d-4d85-b02b-2618df9bafae.jpg" 
-            alt="Wanita Itu Logo"
-            style={{ 
-              width: '48px', 
-              height: '48px', 
-              borderRadius: '8px',
-              objectFit: 'cover'
-            }}
-          />
-          <span style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: '1.4rem', color: 'var(--rose-700)', letterSpacing: '-0.02em' }}>
-            WANITA ITU
-          </span>
-        </div>
-        
-        {isAdminRoute ? (
-          <h1>Organizer Portal</h1>
-        ) : (
-          <>
-            <h1>Vendor Promotion Portal</h1>
-            <p>Select and configure your brand offers for the upcoming Wanita Itu event</p>
-          </>
-        )}
-      </header>
+      {/* Header section — hidden during welcome page */}
+      {!(showWelcome && !isAdminRoute) && (
+        <header className="app-header">
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.5rem' }}>
+            <img 
+              src="https://oalebkgsqedfimyjilsf.supabase.co/storage/v1/object/public/vendor-logos/logos/cdbbdd52-317d-4d85-b02b-2618df9bafae.avif" 
+              alt="Wanita Itu Logo"
+              style={{ 
+                width: '48px', 
+                height: '48px', 
+                borderRadius: '8px',
+                objectFit: 'cover'
+              }}
+            />
+            <span style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: '1.4rem', color: 'var(--rose-700)', letterSpacing: '-0.02em' }}>
+              WANITA ITU
+            </span>
+          </div>
+          
+          {isAdminRoute ? (
+            <h1>Organizer Portal</h1>
+          ) : (
+            <>
+              <h1>Vendor Promotion Portal</h1>
+              <p>Select and configure your brand offers for the upcoming Wanita Itu event</p>
+            </>
+          )}
+        </header>
+      )}
 
       {/* Main Content */}
       <main style={{ flex: 1 }}>
         {isAdminRoute ? (
           <AdminDashboard />
+        ) : showWelcome ? (
+          <WelcomePage onStart={() => setShowWelcome(false)} />
         ) : (
-          <>
+          <motion.div
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4 }}
+          >
             {/* Supabase Not Configured Info Banner */}
             {!isSupabaseConfigured && (
               <div style={{
@@ -94,7 +105,7 @@ function App() {
             )}
 
             <VendorForm />
-          </>
+          </motion.div>
         )}
       </main>
 

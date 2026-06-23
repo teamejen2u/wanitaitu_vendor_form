@@ -12,7 +12,9 @@ export default function LivePreview({
   couponLimitType = 'unlimited',
   couponLimitValue = '',
   joinScratchWin = false,
-  scratchWinPrize = ''
+  scratchWinPrize = '',
+  scratchWinLimitType = 'unlimited',
+  scratchWinLimitValue = ''
 }) {
   const [activeTab, setActiveTab] = useState('coupon');
 
@@ -142,6 +144,26 @@ export default function LivePreview({
                   width={280}
                   height={160}
                 />
+
+                <div style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  marginTop: '0.5rem',
+                  padding: '0.5rem 0.75rem',
+                  backgroundColor: 'var(--slate-50)',
+                  borderRadius: 'var(--radius-sm)',
+                  fontSize: '0.75rem',
+                  color: 'var(--slate-600)',
+                  fontWeight: 500
+                }}>
+                  <span>Wanita Itu Event Exclusive</span>
+                  <span>
+                    {scratchWinLimitType === 'unlimited'
+                      ? 'Unlimited Prizes'
+                      : `Limit: First ${scratchWinLimitValue || '50'} winners`}
+                  </span>
+                </div>
               </motion.div>
             )}
           </AnimatePresence>

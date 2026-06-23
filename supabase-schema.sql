@@ -19,8 +19,19 @@ create table if not exists public.vendor_submissions (
   coupon_limit_type   text,            -- 'unlimited' | 'limited'
   coupon_limit_value  integer,
   join_scratch_win    boolean not null default false,
-  scratch_win_prize   text
+  scratch_win_prize   text,
+  scratch_win_limit_type  text,        -- 'unlimited' | 'limited'
+  scratch_win_limit_value integer
 );
+
+-- ---------------------------------------------------------------------
+-- MIGRATION: if you already created the table before the scratch-limit
+-- feature, run this once in the SQL Editor to add the new columns.
+-- (Safe to run repeatedly; it no-ops if the columns already exist.)
+-- ---------------------------------------------------------------------
+alter table public.vendor_submissions
+  add column if not exists scratch_win_limit_type text,
+  add column if not exists scratch_win_limit_value integer;
 
 -- Helpful index for the admin dashboard's "newest first" ordering
 create index if not exists vendor_submissions_created_at_idx

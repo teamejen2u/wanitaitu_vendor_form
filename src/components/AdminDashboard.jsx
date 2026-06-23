@@ -170,7 +170,9 @@ export default function AdminDashboard() {
       'Coupon Limit Type',
       'Coupon Limit Value',
       'Offers Scratch & Win',
-      'Scratch & Win Prize'
+      'Scratch & Win Prize',
+      'Scratch Win Limit Type',
+      'Scratch Win Limit Value'
     ];
 
     // Rows — every value passed through csvEscape so commas, quotes, and newlines are handled
@@ -187,7 +189,9 @@ export default function AdminDashboard() {
       csvEscape(sub.coupon_limit_type || ''),
       csvEscape(sub.coupon_limit_value || ''),
       csvEscape(sub.join_scratch_win ? 'YES' : 'NO'),
-      csvEscape(sub.scratch_win_prize || '')
+      csvEscape(sub.scratch_win_prize || ''),
+      csvEscape(sub.scratch_win_limit_type || ''),
+      csvEscape(sub.scratch_win_limit_value || '')
     ]);
 
     // Build CSV with BOM so Excel opens it correctly as UTF-8
@@ -567,7 +571,7 @@ export default function AdminDashboard() {
               {selectedSubmission.join_scratch_win && (
                 <div className="detail-section">
                   <h4>Gores & Menang (Scratch & Win) Prize</h4>
-                  <div style={{ backgroundColor: 'var(--slate-50)', padding: '1rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--slate-200)' }}>
+                  <div style={{ backgroundColor: 'var(--slate-50)', padding: '1rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--slate-200)', marginBottom: '1rem' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', color: 'var(--gold-600)', fontWeight: 700, fontSize: '0.85rem', marginBottom: '0.25rem' }}>
                       <Sparkles size={14} />
                       <span>OFFERED PRIZE</span>
@@ -575,6 +579,16 @@ export default function AdminDashboard() {
                     <p style={{ fontWeight: 600, color: 'var(--slate-800)', wordBreak: 'break-word' }}>
                       {selectedSubmission.scratch_win_prize}
                     </p>
+                  </div>
+                  <div className="detail-grid">
+                    <div className="detail-item">
+                      <label>Prize Limit</label>
+                      <p>
+                        {selectedSubmission.scratch_win_limit_type === 'unlimited'
+                          ? 'Unlimited Winners'
+                          : `Limit: First ${selectedSubmission.scratch_win_limit_value} winners`}
+                      </p>
+                    </div>
                   </div>
                 </div>
               )}
