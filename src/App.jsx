@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ShieldAlert, Landmark, LogIn } from 'lucide-react';
+import { ShieldAlert, LogIn } from 'lucide-react';
 import VendorForm from './components/VendorForm';
 import AdminDashboard from './components/AdminDashboard';
 import { isSupabaseConfigured } from './supabaseClient';

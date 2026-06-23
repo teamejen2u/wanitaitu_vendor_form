@@ -203,6 +203,20 @@ header.app-header p {
   padding-bottom: 0.75rem;
 }
 
+/* Two-column form row (stacks on mobile) */
+.form-row-2col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+}
+
+@media (max-width: 640px) {
+  .form-row-2col {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+}
+
 /* Form Elements */
 .form-group {
   margin-bottom: 1.5rem;
@@ -426,6 +440,12 @@ header.app-header p {
   cursor: pointer;
   transition: all 0.2s ease;
   color: var(--slate-800);
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  line-height: 1.25;
 }
 
 .option-btn:hover {
@@ -436,6 +456,17 @@ header.app-header p {
   border-color: var(--purple-500);
   background-color: var(--purple-500);
   color: var(--white);
+}
+
+@media (max-width: 480px) {
+  .options-button-group {
+    gap: 0.5rem;
+  }
+
+  .option-btn {
+    padding: 0.625rem 0.5rem;
+    font-size: 0.85rem;
+  }
 }
 
 /* Live Preview Side Panel */

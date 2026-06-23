@@ -283,30 +283,32 @@ export default function VendorForm() {
                     {validationErrors.vendorName && <div className="auth-error"><AlertCircle size={14} style={{ display: 'inline', marginRight: '4px', verticalAlign: 'middle' }} />{validationErrors.vendorName}</div>}
                   </div>
 
-                  <div className="form-group">
-                    <label className="form-label" htmlFor="contactName">Contact Person Name *</label>
-                    <input 
-                      type="text"
-                      id="contactName"
-                      className="form-input"
-                      placeholder="E.g., Sarah Ahmad"
-                      value={contactName}
-                      onChange={(e) => setContactName(e.target.value)}
-                    />
-                    {validationErrors.contactName && <div className="auth-error"><AlertCircle size={14} style={{ display: 'inline', marginRight: '4px', verticalAlign: 'middle' }} />{validationErrors.contactName}</div>}
-                  </div>
+                  <div className="form-row-2col">
+                    <div className="form-group">
+                      <label className="form-label" htmlFor="contactName">Contact Person Name *</label>
+                      <input 
+                        type="text"
+                        id="contactName"
+                        className="form-input"
+                        placeholder="E.g., Sarah Ahmad"
+                        value={contactName}
+                        onChange={(e) => setContactName(e.target.value)}
+                      />
+                      {validationErrors.contactName && <div className="auth-error"><AlertCircle size={14} style={{ display: 'inline', marginRight: '4px', verticalAlign: 'middle' }} />{validationErrors.contactName}</div>}
+                    </div>
 
-                  <div className="form-group">
-                    <label className="form-label" htmlFor="contactPhone">WhatsApp / Phone Number *</label>
-                    <input 
-                      type="tel"
-                      id="contactPhone"
-                      className="form-input"
-                      placeholder="E.g., +60123456789"
-                      value={contactPhone}
-                      onChange={(e) => setContactPhone(e.target.value)}
-                    />
-                    {validationErrors.contactPhone && <div className="auth-error"><AlertCircle size={14} style={{ display: 'inline', marginRight: '4px', verticalAlign: 'middle' }} />{validationErrors.contactPhone}</div>}
+                    <div className="form-group">
+                      <label className="form-label" htmlFor="contactPhone">WhatsApp / Phone Number *</label>
+                      <input 
+                        type="tel"
+                        id="contactPhone"
+                        className="form-input"
+                        placeholder="E.g., +60123456789"
+                        value={contactPhone}
+                        onChange={(e) => setContactPhone(e.target.value)}
+                      />
+                      {validationErrors.contactPhone && <div className="auth-error"><AlertCircle size={14} style={{ display: 'inline', marginRight: '4px', verticalAlign: 'middle' }} />{validationErrors.contactPhone}</div>}
+                    </div>
                   </div>
 
                   <div className="form-group">
