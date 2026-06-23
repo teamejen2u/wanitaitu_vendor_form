@@ -36,8 +36,17 @@ function App() {
     <div className="app-container">
       {/* Header section */}
       <header className="app-header">
-        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
-          <Landmark size={28} color="var(--rose-500)" />
+        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.5rem' }}>
+          <img 
+            src="https://images.lumacdn.com/cdn-cgi/image/format=auto,fit=cover,dpr=2,anim=false,background=white,quality=75,width=112,height=112/uploads/2k/cdbbdd52-317d-4d85-b02b-2618df9bafae.jpg" 
+            alt="Wanita Itu Logo"
+            style={{ 
+              width: '48px', 
+              height: '48px', 
+              borderRadius: '8px',
+              objectFit: 'cover'
+            }}
+          />
           <span style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: '1.4rem', color: 'var(--rose-700)', letterSpacing: '-0.02em' }}>
             WANITA ITU
           </span>
