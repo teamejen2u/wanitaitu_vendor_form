@@ -502,21 +502,9 @@ export default function VendorForm() {
                   {/* Coupon Settings */}
                   {joinCoupon && (
                     <div style={{ marginBottom: '2.5rem' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                          <Ticket size={18} color="var(--rose-500)" />
-                          <h3 style={{ fontFamily: 'var(--font-display)', fontWeight: 700 }}>Discount Coupon Settings</h3>
-                        </div>
-                        {coupons.length < 3 && (
-                          <button
-                            type="button"
-                            className="btn btn-secondary"
-                            onClick={addCoupon}
-                            style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem', height: 'auto' }}
-                          >
-                            + Add Coupon
-                          </button>
-                        )}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
+                        <Ticket size={18} color="var(--rose-500)" />
+                        <h3 style={{ fontFamily: 'var(--font-display)', fontWeight: 700 }}>Discount Coupon Settings</h3>
                       </div>
 
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
@@ -671,6 +659,29 @@ export default function VendorForm() {
                             </div>
                           );
                         })}
+
+                        {coupons.length < 3 && (
+                          <button
+                            type="button"
+                            className="btn btn-secondary"
+                            onClick={addCoupon}
+                            style={{ 
+                              width: '100%', 
+                              justifyContent: 'center', 
+                              borderStyle: 'dashed', 
+                              borderWidth: '1.5px',
+                              backgroundColor: 'transparent',
+                              color: 'var(--rose-500)',
+                              borderColor: 'var(--rose-300)',
+                              marginTop: '0.5rem',
+                              height: '42px',
+                              fontSize: '0.9rem',
+                              fontWeight: 600
+                            }}
+                          >
+                            + Add Another Coupon
+                          </button>
+                        )}
                       </div>
                     </div>
                   )}
