@@ -7,10 +7,12 @@ const SCRATCH_THRESHOLD = 0.25; // 25% scratched to auto-reveal
 export default function ScratchCard({ 
   vendorName = 'Your Brand', 
   prize = 'Free Gift!',
+  prizeImageUrl = '',
   width = 280,
-  height = 160,
+  height: heightProp = 160,
   onReveal
 }) {
+  const height = prizeImageUrl ? Math.max(heightProp, 200) : heightProp;
   const canvasRef = useRef(null);
   const [isRevealed, setIsRevealed] = useState(false);
   const isDrawing = useRef(false);
@@ -188,9 +190,24 @@ export default function ScratchCard({
           }}
         >
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.25rem' }}>
-            <div style={{ rotate: 0 }}>
-              <Sparkles size={28} color="#e11d48" />
-            </div>
+            {prizeImageUrl && (
+              <img 
+                src={prizeImageUrl} 
+                alt="Prize" 
+                style={{ 
+                  maxHeight: '60px', 
+                  maxWidth: '80%', 
+                  objectFit: 'contain', 
+                  borderRadius: '6px',
+                  marginBottom: '0.15rem'
+                }} 
+              />
+            )}
+            {!prizeImageUrl && (
+              <div style={{ rotate: 0 }}>
+                <Sparkles size={28} color="#e11d48" />
+              </div>
+            )}
             <div style={{ fontWeight: 800, fontSize: '0.85rem', color: '#e11d48', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
               Tahniah! You Won!
             </div>

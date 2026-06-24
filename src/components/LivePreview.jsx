@@ -172,6 +172,7 @@ export default function LivePreview({
                       <ScratchCard
                         vendorName={displayVendorName}
                         prize={currentPrize}
+                        prizeImageUrl={scratch.prizeImagePreviewUrl || scratch.prize_image_url || ''}
                         width={280}
                         height={160}
                       />

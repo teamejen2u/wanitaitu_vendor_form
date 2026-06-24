@@ -397,7 +397,8 @@ export default function AdminDashboard() {
         scratch_prizes: editForm.join_scratch_win ? editForm.scratch_prizes.map(s => ({
           prize: s.prize.trim(),
           limit_type: s.limit_type,
-          limit_value: s.limit_type === 'limited' ? parseInt(s.limit_value, 10) : null
+          limit_value: s.limit_type === 'limited' ? parseInt(s.limit_value, 10) : null,
+          prize_image_url: s.prize_image_url || null
         })) : [],
 
         scratch_win_prize: firstScratch ? firstScratch.prize.trim() : null,
@@ -1086,6 +1087,16 @@ export default function AdminDashboard() {
                                     {editErrors[`scratch_${idx}_prize`]}
                                   </span>
                                 )}
+                                {scratch.prize_image_url && (
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.5rem' }}>
+                                    <img 
+                                      src={scratch.prize_image_url} 
+                                      alt="Current Prize" 
+                                      style={{ width: '40px', height: '40px', objectFit: 'contain', borderRadius: '4px', border: '1px solid var(--slate-200)' }} 
+                                    />
+                                    <span style={{ fontSize: '0.75rem', color: 'var(--slate-500)' }}>Current Prize Image (Read-only)</span>
+                                  </div>
+                                )}
                               </div>
 
                               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
@@ -1269,6 +1280,15 @@ export default function AdminDashboard() {
                                   <p style={{ fontWeight: 600, color: 'var(--slate-800)', wordBreak: 'break-word' }}>
                                     {scratch.prize}
                                   </p>
+                                  {scratch.prize_image_url && (
+                                    <div style={{ marginTop: '0.5rem' }}>
+                                      <img 
+                                        src={scratch.prize_image_url} 
+                                        alt="Prize Thumbnail" 
+                                        style={{ maxHeight: '80px', maxWidth: '100%', objectFit: 'contain', borderRadius: '4px', border: '1px solid var(--slate-200)' }} 
+                                      />
+                                    </div>
+                                  )}
                                 </div>
                                 <div className="detail-item">
                                   <label>Prize Limit</label>

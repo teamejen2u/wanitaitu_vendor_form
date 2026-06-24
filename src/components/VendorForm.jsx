@@ -79,7 +79,7 @@ export default function VendorForm() {
 
   const [joinScratchWin, setJoinScratchWin] = useState(false);
   const [scratchPrizes, setScratchPrizes] = useState([
-    { id: 1, prize: '', limitType: 'unlimited', limitValue: '' }
+    { id: 1, prize: '', limitType: 'unlimited', limitValue: '', prizeImageFile: null, prizeImagePreviewUrl: '' }
   ]);
   const [expandedScratchId, setExpandedScratchId] = useState(1);
 
@@ -88,7 +88,7 @@ export default function VendorForm() {
     const newId = Date.now();
     setScratchPrizes(prev => [
       ...prev,
-      { id: newId, prize: '', limitType: 'unlimited', limitValue: '' }
+      { id: newId, prize: '', limitType: 'unlimited', limitValue: '', prizeImageFile: null, prizeImagePreviewUrl: '' }
     ]);
     setExpandedScratchId(newId);
   };
@@ -292,6 +292,42 @@ export default function VendorForm() {
         }
       }
 
+      // Upload scratch prize images (if any)
+      const prizeImageUrls = {};
+      if (joinScratchWin) {
+        for (const scratch of scratchPrizes) {
+          if (scratch.prizeImageFile) {
+            const fileExt = scratch.prizeImageFile.name.split('.').pop();
+            const fileName = `${Date.now()}-${Math.random().toString(36).substring(2, 7)}.${fileExt}`;
+            const filePath = `prize-images/${fileName}`;
+
+            if (isSupabaseConfigured) {
+              const { error: uploadErr } = await supabase.storage
+                .from('vendor-logos')
+                .upload(filePath, scratch.prizeImageFile, {
+                  cacheControl: '3600',
+                  upsert: false
+                });
+
+              if (uploadErr) {
+                console.error('Prize image upload error:', uploadErr);
+                throw new Error(`Failed to upload prize image: ${uploadErr.message}`);
+              }
+
+              const { data: urlData } = supabase.storage
+                .from('vendor-logos')
+                .getPublicUrl(filePath);
+
+              prizeImageUrls[scratch.id] = urlData.publicUrl;
+            } else {
+              const mockUpload = await mockDb.uploadLogo(scratch.prizeImageFile);
+              if (mockUpload.error) throw mockUpload.error;
+              prizeImageUrls[scratch.id] = mockUpload.publicUrl;
+            }
+          }
+        }
+      }
+
       // Prepare submission payload
       const payload = {
         vendor_name: vendorName,
@@ -316,7 +352,8 @@ export default function VendorForm() {
         scratch_prizes: joinScratchWin ? scratchPrizes.map(s => ({
           prize: s.prize,
           limit_type: s.limitType,
-          limit_value: s.limitType === 'limited' ? parseInt(s.limitValue) : null
+          limit_value: s.limitType === 'limited' ? parseInt(s.limitValue) : null,
+          prize_image_url: prizeImageUrls[s.id] || null
         })) : null
       };
 
@@ -833,6 +870,76 @@ export default function VendorForm() {
                                     {hasPrizeErr && <div className="auth-error"><AlertCircle size={14} style={{ display: 'inline', marginRight: '4px', verticalAlign: 'middle' }} />{hasPrizeErr}</div>}
                                   </div>
 
+                                  {/* Optional Prize Image Upload */}
+                                  <div className="form-group">
+                                    <label className="form-label">Prize Image (Optional)</label>
+                                    <p style={{ fontSize: '0.8rem', color: 'var(--slate-500)', marginBottom: '0.5rem' }}>
+                                      Upload a photo of the prize. It will appear when the customer scratches the card.
+                                    </p>
+
+                                    {!scratch.prizeImagePreviewUrl ? (
+                                      <div 
+                                        style={{
+                                          border: '1.5px dashed var(--gold-300)',
+                                          borderRadius: 'var(--radius-md)',
+                                          padding: '1rem',
+                                          textAlign: 'center',
+                                          cursor: 'pointer',
+                                          backgroundColor: 'var(--slate-50)',
+                                          transition: 'border-color 0.2s ease'
+                                        }}
+                                        onClick={() => {
+                                          const input = document.createElement('input');
+                                          input.type = 'file';
+                                          input.accept = 'image/*';
+                                          input.onchange = (ev) => {
+                                            const file = ev.target.files[0];
+                                            if (!file) return;
+                                            if (file.size > 5 * 1024 * 1024) {
+                                              alert('Image must be under 5MB.');
+                                              return;
+                                            }
+                                            const previewUrl = URL.createObjectURL(file);
+                                            setScratchPrizes(prev => prev.map(s => 
+                                              s.id === scratch.id 
+                                                ? { ...s, prizeImageFile: file, prizeImagePreviewUrl: previewUrl } 
+                                                : s
+                                            ));
+                                          };
+                                          input.click();
+                                        }}
+                                      >
+                                        <Upload size={20} style={{ margin: '0 auto 0.25rem auto', color: 'var(--gold-500)' }} />
+                                        <div style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--slate-600)' }}>Click to upload prize image</div>
+                                        <div style={{ fontSize: '0.7rem', color: 'var(--slate-400)' }}>PNG, JPG (Max 5MB)</div>
+                                      </div>
+                                    ) : (
+                                      <div className="upload-preview-container">
+                                        <img src={scratch.prizeImagePreviewUrl} alt="Prize preview" className="upload-preview-img" />
+                                        <div className="upload-preview-info">
+                                          <div className="upload-preview-name">{scratch.prizeImageFile?.name || 'Prize Image'}</div>
+                                          {scratch.prizeImageFile && (
+                                            <div className="upload-preview-size">{(scratch.prizeImageFile.size / 1024).toFixed(1)} KB</div>
+                                          )}
+                                        </div>
+                                        <button 
+                                          type="button" 
+                                          className="upload-remove-btn" 
+                                          onClick={() => {
+                                            setScratchPrizes(prev => prev.map(s => 
+                                              s.id === scratch.id 
+                                                ? { ...s, prizeImageFile: null, prizeImagePreviewUrl: '' } 
+                                                : s
+                                            ));
+                                          }} 
+                                          title="Remove prize image"
+                                        >
+                                          <Trash2 size={16} />
+                                        </button>
+                                      </div>
+                                    )}
+                                  </div>
+
                                   <div className="form-group">
                                     <label className="form-label">Prize Limit</label>
                                     <div className="options-button-group">
@@ -1031,7 +1138,7 @@ export default function VendorForm() {
               setExpandedCouponId(null);
               setJoinScratchWin(false);
               setScratchPrizes([
-                { id: Date.now(), prize: '', limitType: 'unlimited', limitValue: '' }
+                { id: Date.now(), prize: '', limitType: 'unlimited', limitValue: '', prizeImageFile: null, prizeImagePreviewUrl: '' }
               ]);
               setExpandedScratchId(null);
             }}
