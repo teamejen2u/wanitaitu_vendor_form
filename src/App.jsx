@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { AnimatePresence, motion } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { ShieldAlert, LogIn } from 'lucide-react';
 import VendorForm from './components/VendorForm';
 import AdminDashboard from './components/AdminDashboard';

@@ -7,7 +7,6 @@ import {
   Check, 
   Ticket, 
   Sparkles, 
-  CheckCircle2, 
   Trash2, 
   AlertCircle 
 } from 'lucide-react';
@@ -184,7 +183,7 @@ export default function VendorForm() {
 
         if (isSupabaseConfigured) {
           // Upload to Supabase Storage
-          const { data: uploadData, error: uploadErr } = await supabase.storage
+          const { error: uploadErr } = await supabase.storage
             .from('vendor-logos')
             .upload(filePath, logoFile, {
               cacheControl: '3600',
@@ -296,7 +295,12 @@ export default function VendorForm() {
                       className="form-input"
                       placeholder="E.g., Blossom Bakery"
                       value={vendorName}
-                      onChange={(e) => setVendorName(e.target.value)}
+                      onChange={(e) => {
+                        setVendorName(e.target.value);
+                        if (validationErrors.vendorName) {
+                          setValidationErrors(prev => ({ ...prev, vendorName: null }));
+                        }
+                      }}
                     />
                     {validationErrors.vendorName && <div className="auth-error"><AlertCircle size={14} style={{ display: 'inline', marginRight: '4px', verticalAlign: 'middle' }} />{validationErrors.vendorName}</div>}
                   </div>
@@ -310,7 +314,12 @@ export default function VendorForm() {
                         className="form-input"
                         placeholder="E.g., Sarah Ahmad"
                         value={contactName}
-                        onChange={(e) => setContactName(e.target.value)}
+                        onChange={(e) => {
+                          setContactName(e.target.value);
+                          if (validationErrors.contactName) {
+                            setValidationErrors(prev => ({ ...prev, contactName: null }));
+                          }
+                        }}
                       />
                       {validationErrors.contactName && <div className="auth-error"><AlertCircle size={14} style={{ display: 'inline', marginRight: '4px', verticalAlign: 'middle' }} />{validationErrors.contactName}</div>}
                     </div>
@@ -323,7 +332,12 @@ export default function VendorForm() {
                         className="form-input"
                         placeholder="E.g., +60123456789"
                         value={contactPhone}
-                        onChange={(e) => setContactPhone(e.target.value)}
+                        onChange={(e) => {
+                          setContactPhone(e.target.value);
+                          if (validationErrors.contactPhone) {
+                            setValidationErrors(prev => ({ ...prev, contactPhone: null }));
+                          }
+                        }}
                       />
                       {validationErrors.contactPhone && <div className="auth-error"><AlertCircle size={14} style={{ display: 'inline', marginRight: '4px', verticalAlign: 'middle' }} />{validationErrors.contactPhone}</div>}
                     </div>
@@ -379,7 +393,12 @@ export default function VendorForm() {
                     {/* Discount Coupon Card */}
                     <div 
                       className={`promotion-card ${joinCoupon ? 'selected' : ''}`}
-                      onClick={() => setJoinCoupon(!joinCoupon)}
+                      onClick={() => {
+                        setJoinCoupon(!joinCoupon);
+                        if (validationErrors.promotionSelection) {
+                          setValidationErrors(prev => ({ ...prev, promotionSelection: null }));
+                        }
+                      }}
                     >
                       <div className="promotion-card-check">
                         {joinCoupon && <Check size={14} />}
@@ -396,7 +415,12 @@ export default function VendorForm() {
                     {/* Scratch Card */}
                     <div 
                       className={`promotion-card ${joinScratchWin ? 'selected' : ''}`}
-                      onClick={() => setJoinScratchWin(!joinScratchWin)}
+                      onClick={() => {
+                        setJoinScratchWin(!joinScratchWin);
+                        if (validationErrors.promotionSelection) {
+                          setValidationErrors(prev => ({ ...prev, promotionSelection: null }));
+                        }
+                      }}
                     >
                       <div className="promotion-card-check">
                         {joinScratchWin && <Check size={14} />}
@@ -466,7 +490,12 @@ export default function VendorForm() {
                           className="form-input"
                           placeholder={couponType === 'percentage' ? 'E.g., 10' : 'E.g., 5'}
                           value={couponValue}
-                          onChange={(e) => setCouponValue(e.target.value)}
+                          onChange={(e) => {
+                            setCouponValue(e.target.value);
+                            if (validationErrors.couponValue) {
+                              setValidationErrors(prev => ({ ...prev, couponValue: null }));
+                            }
+                          }}
                         />
                         {validationErrors.couponValue && <div className="auth-error"><AlertCircle size={14} style={{ display: 'inline', marginRight: '4px', verticalAlign: 'middle' }} />{validationErrors.couponValue}</div>}
                       </div>
@@ -500,7 +529,12 @@ export default function VendorForm() {
                             className="form-input"
                             placeholder="E.g., 100"
                             value={couponLimitValue}
-                            onChange={(e) => setCouponLimitValue(e.target.value)}
+                            onChange={(e) => {
+                              setCouponLimitValue(e.target.value);
+                              if (validationErrors.couponLimitValue) {
+                                setValidationErrors(prev => ({ ...prev, couponLimitValue: null }));
+                              }
+                            }}
                           />
                           {validationErrors.couponLimitValue && <div className="auth-error"><AlertCircle size={14} style={{ display: 'inline', marginRight: '4px', verticalAlign: 'middle' }} />{validationErrors.couponLimitValue}</div>}
                         </div>
@@ -525,7 +559,12 @@ export default function VendorForm() {
                           placeholder="E.g., Free sample of our Signature cookies with no minimum spend! or Buy 1 Free 1 on all cosmetics."
                           style={{ resize: 'vertical' }}
                           value={scratchWinPrize}
-                          onChange={(e) => setScratchWinPrize(e.target.value)}
+                          onChange={(e) => {
+                            setScratchWinPrize(e.target.value);
+                            if (validationErrors.scratchWinPrize) {
+                              setValidationErrors(prev => ({ ...prev, scratchWinPrize: null }));
+                            }
+                          }}
                         />
                         {validationErrors.scratchWinPrize && <div className="auth-error"><AlertCircle size={14} style={{ display: 'inline', marginRight: '4px', verticalAlign: 'middle' }} />{validationErrors.scratchWinPrize}</div>}
                       </div>
@@ -559,7 +598,12 @@ export default function VendorForm() {
                             className="form-input"
                             placeholder="E.g., 50"
                             value={scratchWinLimitValue}
-                            onChange={(e) => setScratchWinLimitValue(e.target.value)}
+                            onChange={(e) => {
+                              setScratchWinLimitValue(e.target.value);
+                              if (validationErrors.scratchWinLimitValue) {
+                                setValidationErrors(prev => ({ ...prev, scratchWinLimitValue: null }));
+                              }
+                            }}
                           />
                           {validationErrors.scratchWinLimitValue && <div className="auth-error"><AlertCircle size={14} style={{ display: 'inline', marginRight: '4px', verticalAlign: 'middle' }} />{validationErrors.scratchWinLimitValue}</div>}
                         </div>
