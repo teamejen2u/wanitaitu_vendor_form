@@ -33,10 +33,49 @@ export default function VendorForm() {
   const [logoPreviewUrl, setLogoPreviewUrl] = useState('');
   
   const [joinCoupon, setJoinCoupon] = useState(false);
-  const [couponType, setCouponType] = useState('percentage'); // 'fixed' or 'percentage'
-  const [couponValue, setCouponValue] = useState('');
-  const [couponLimitType, setCouponLimitType] = useState('unlimited'); // 'unlimited' or 'limited'
-  const [couponLimitValue, setCouponLimitValue] = useState('');
+  const [coupons, setCoupons] = useState([
+    { id: 1, type: 'percentage', value: '', limitType: 'unlimited', limitValue: '' }
+  ]);
+  const [expandedCouponId, setExpandedCouponId] = useState(1);
+
+  const addCoupon = () => {
+    if (coupons.length >= 3) return; // Limit to max 3
+    const newId = Date.now();
+    setCoupons(prev => [
+      ...prev,
+      { id: newId, type: 'percentage', value: '', limitType: 'unlimited', limitValue: '' }
+    ]);
+    setExpandedCouponId(newId);
+  };
+
+  const updateCoupon = (id, field, val) => {
+    setCoupons(prev => prev.map(c => c.id === id ? { ...c, [field]: val } : c));
+    
+    // Clear validation error when user types or updates the input
+    const errorKey = `coupon_${id}_${field}`;
+    if (validationErrors[errorKey]) {
+      setValidationErrors(prev => ({ ...prev, [errorKey]: null }));
+    }
+  };
+
+  const removeCoupon = (id) => {
+    if (coupons.length <= 1) return;
+    const remaining = coupons.filter(c => c.id !== id);
+    setCoupons(remaining);
+    
+    // If the expanded coupon is removed, expand the first remaining one
+    if (expandedCouponId === id) {
+      setExpandedCouponId(remaining[0].id);
+    }
+
+    // Clean up any validation errors for this coupon
+    setValidationErrors(prev => {
+      const copy = { ...prev };
+      delete copy[`coupon_${id}_value`];
+      delete copy[`coupon_${id}_limitValue`];
+      return copy;
+    });
+  };
 
   const [joinScratchWin, setJoinScratchWin] = useState(false);
   const [scratchWinPrize, setScratchWinPrize] = useState('');
@@ -119,19 +158,21 @@ export default function VendorForm() {
       }
     } else if (currentStep === 3) {
       if (joinCoupon) {
-        if (!couponValue) {
-          errors.couponValue = 'Discount value is required';
-        } else if (isNaN(couponValue) || parseFloat(couponValue) <= 0) {
-          errors.couponValue = 'Please enter a valid positive number';
-        }
-
-        if (couponLimitType === 'limited') {
-          if (!couponLimitValue) {
-            errors.couponLimitValue = 'Limit amount is required';
-          } else if (isNaN(couponLimitValue) || parseInt(couponLimitValue) <= 0) {
-            errors.couponLimitValue = 'Please enter a valid positive number';
+        coupons.forEach((coupon, index) => {
+          if (!coupon.value) {
+            errors[`coupon_${coupon.id}_value`] = `Discount value is required (Coupon #${index + 1})`;
+          } else if (isNaN(coupon.value) || parseFloat(coupon.value) <= 0) {
+            errors[`coupon_${coupon.id}_value`] = `Please enter a valid positive number (Coupon #${index + 1})`;
           }
-        }
+
+          if (coupon.limitType === 'limited') {
+            if (!coupon.limitValue) {
+              errors[`coupon_${coupon.id}_limitValue`] = `Limit amount is required (Coupon #${index + 1})`;
+            } else if (isNaN(coupon.limitValue) || parseInt(coupon.limitValue) <= 0) {
+              errors[`coupon_${coupon.id}_limitValue`] = `Please enter a valid positive number (Coupon #${index + 1})`;
+            }
+          }
+        });
       }
       if (joinScratchWin) {
         if (!scratchWinPrize.trim()) {
@@ -216,10 +257,16 @@ export default function VendorForm() {
         contact_phone: contactPhone,
         logo_url: finalLogoUrl,
         join_coupon: joinCoupon,
-        coupon_type: joinCoupon ? couponType : null,
-        coupon_value: joinCoupon ? parseFloat(couponValue) : null,
-        coupon_limit_type: joinCoupon ? couponLimitType : null,
-        coupon_limit_value: (joinCoupon && couponLimitType === 'limited') ? parseInt(couponLimitValue) : null,
+        coupon_type: (joinCoupon && coupons.length > 0) ? coupons[0].type : null,
+        coupon_value: (joinCoupon && coupons.length > 0 && coupons[0].value) ? parseFloat(coupons[0].value) : null,
+        coupon_limit_type: (joinCoupon && coupons.length > 0) ? coupons[0].limitType : null,
+        coupon_limit_value: (joinCoupon && coupons.length > 0 && coupons[0].limitType === 'limited' && coupons[0].limitValue) ? parseInt(coupons[0].limitValue) : null,
+        coupons: joinCoupon ? coupons.map(c => ({
+          type: c.type,
+          value: parseFloat(c.value),
+          limit_type: c.limitType,
+          limit_value: c.limitType === 'limited' ? parseInt(c.limitValue) : null
+        })) : null,
         join_scratch_win: joinScratchWin,
         scratch_win_prize: joinScratchWin ? scratchWinPrize : null,
         scratch_win_limit_type: joinScratchWin ? scratchWinLimitType : null,
@@ -454,91 +501,177 @@ export default function VendorForm() {
 
                   {/* Coupon Settings */}
                   {joinCoupon && (
-                    <div style={{ marginBottom: '2.5rem', padding: '1rem', border: '1px solid var(--slate-200)', borderRadius: 'var(--radius-md)' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
-                        <Ticket size={18} color="var(--rose-500)" />
-                        <h3 style={{ fontFamily: 'var(--font-display)', fontWeight: 700 }}>Discount Coupon Settings</h3>
-                      </div>
-
-                      <div className="form-group">
-                        <label className="form-label">Discount Value Type</label>
-                        <div className="options-button-group">
-                          <button 
-                            type="button"
-                            className={`option-btn ${couponType === 'percentage' ? 'active' : ''}`}
-                            onClick={() => setCouponType('percentage')}
-                          >
-                            Percentage (%)
-                          </button>
-                          <button 
-                            type="button"
-                            className={`option-btn ${couponType === 'fixed' ? 'active' : ''}`}
-                            onClick={() => setCouponType('fixed')}
-                          >
-                            Fixed Amount (RM)
-                          </button>
+                    <div style={{ marginBottom: '2.5rem' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                          <Ticket size={18} color="var(--rose-500)" />
+                          <h3 style={{ fontFamily: 'var(--font-display)', fontWeight: 700 }}>Discount Coupon Settings</h3>
                         </div>
-                      </div>
-
-                      <div className="form-group">
-                        <label className="form-label" htmlFor="couponValue">
-                          {couponType === 'percentage' ? 'Discount Percentage (%) *' : 'Discount Amount (RM) *'}
-                        </label>
-                        <input 
-                          type="number"
-                          id="couponValue"
-                          className="form-input"
-                          placeholder={couponType === 'percentage' ? 'E.g., 10' : 'E.g., 5'}
-                          value={couponValue}
-                          onChange={(e) => {
-                            setCouponValue(e.target.value);
-                            if (validationErrors.couponValue) {
-                              setValidationErrors(prev => ({ ...prev, couponValue: null }));
-                            }
-                          }}
-                        />
-                        {validationErrors.couponValue && <div className="auth-error"><AlertCircle size={14} style={{ display: 'inline', marginRight: '4px', verticalAlign: 'middle' }} />{validationErrors.couponValue}</div>}
-                      </div>
-
-                      <div className="form-group">
-                        <label className="form-label">Redemption Limit</label>
-                        <div className="options-button-group">
-                          <button 
+                        {coupons.length < 3 && (
+                          <button
                             type="button"
-                            className={`option-btn ${couponLimitType === 'unlimited' ? 'active' : ''}`}
-                            onClick={() => setCouponLimitType('unlimited')}
+                            className="btn btn-secondary"
+                            onClick={addCoupon}
+                            style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem', height: 'auto' }}
                           >
-                            Unlimited Customers
+                            + Add Coupon
                           </button>
-                          <button 
-                            type="button"
-                            className={`option-btn ${couponLimitType === 'limited' ? 'active' : ''}`}
-                            onClick={() => setCouponLimitType('limited')}
-                          >
-                            Set Limit
-                          </button>
-                        </div>
+                        )}
                       </div>
 
-                      {couponLimitType === 'limited' && (
-                        <div className="form-group">
-                          <label className="form-label" htmlFor="couponLimitValue">Maximum Redeeming Customers *</label>
-                          <input 
-                            type="number"
-                            id="couponLimitValue"
-                            className="form-input"
-                            placeholder="E.g., 100"
-                            value={couponLimitValue}
-                            onChange={(e) => {
-                              setCouponLimitValue(e.target.value);
-                              if (validationErrors.couponLimitValue) {
-                                setValidationErrors(prev => ({ ...prev, couponLimitValue: null }));
-                              }
-                            }}
-                          />
-                          {validationErrors.couponLimitValue && <div className="auth-error"><AlertCircle size={14} style={{ display: 'inline', marginRight: '4px', verticalAlign: 'middle' }} />{validationErrors.couponLimitValue}</div>}
-                        </div>
-                      )}
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                        {coupons.map((coupon, index) => {
+                          const isExpanded = coupon.id === expandedCouponId || coupons.length === 1;
+                          const hasValueErr = validationErrors[`coupon_${coupon.id}_value`];
+                          const hasLimitErr = validationErrors[`coupon_${coupon.id}_limitValue`];
+
+                          return (
+                            <div 
+                              key={coupon.id} 
+                              style={{ 
+                                border: '1px solid var(--slate-200)', 
+                                borderRadius: 'var(--radius-md)',
+                                backgroundColor: 'var(--white)',
+                                overflow: 'hidden'
+                              }}
+                            >
+                              {/* Accordion / Card Header */}
+                              <div 
+                                onClick={() => setExpandedCouponId(isExpanded ? null : coupon.id)}
+                                style={{ 
+                                  padding: '0.75rem 1rem', 
+                                  backgroundColor: 'var(--slate-50)', 
+                                  borderBottom: isExpanded ? '1px solid var(--slate-200)' : 'none',
+                                  display: 'flex', 
+                                  alignItems: 'center', 
+                                  justifyContent: 'space-between',
+                                  cursor: 'pointer',
+                                  userSelect: 'none'
+                                }}
+                              >
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                  <span style={{ 
+                                    fontWeight: 700, 
+                                    fontSize: '0.85rem', 
+                                    color: 'var(--slate-700)',
+                                    backgroundColor: 'var(--slate-200)',
+                                    padding: '2px 6px',
+                                    borderRadius: '4px'
+                                  }}>
+                                    #{index + 1}
+                                  </span>
+                                  <span style={{ fontWeight: 600, fontSize: '0.9rem', color: 'var(--slate-800)' }}>
+                                    {coupon.value 
+                                      ? `${coupon.type === 'percentage' ? `${coupon.value}%` : `RM${coupon.value}`} OFF Coupon` 
+                                      : 'New Discount Coupon'}
+                                  </span>
+                                  {coupon.limitType === 'limited' && coupon.limitValue && (
+                                    <span style={{ fontSize: '0.75rem', color: 'var(--slate-500)', fontStyle: 'italic' }}>
+                                      (Limit: {coupon.limitValue})
+                                    </span>
+                                  )}
+                                </div>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }} onClick={(e) => e.stopPropagation()}>
+                                  {coupons.length > 1 && (
+                                    <button 
+                                      type="button" 
+                                      onClick={() => removeCoupon(coupon.id)}
+                                      style={{ 
+                                        background: 'none', 
+                                        border: 'none', 
+                                        color: 'var(--rose-500)', 
+                                        cursor: 'pointer',
+                                        padding: '4px',
+                                        borderRadius: '4px'
+                                      }}
+                                    >
+                                      <Trash2 size={16} />
+                                    </button>
+                                  )}
+                                  <span style={{ fontSize: '0.8rem', color: 'var(--slate-400)', cursor: 'pointer' }} onClick={() => setExpandedCouponId(isExpanded ? null : coupon.id)}>
+                                    {isExpanded ? 'Collapse' : 'Edit'}
+                                  </span>
+                                </div>
+                              </div>
+
+                              {/* Card Inputs */}
+                              {isExpanded && (
+                                <div style={{ padding: '1rem' }}>
+                                  <div className="form-group">
+                                    <label className="form-label">Discount Value Type</label>
+                                    <div className="options-button-group">
+                                      <button 
+                                        type="button"
+                                        className={`option-btn ${coupon.type === 'percentage' ? 'active' : ''}`}
+                                        onClick={() => updateCoupon(coupon.id, 'type', 'percentage')}
+                                      >
+                                        Percentage (%)
+                                      </button>
+                                      <button 
+                                        type="button"
+                                        className={`option-btn ${coupon.type === 'fixed' ? 'active' : ''}`}
+                                        onClick={() => updateCoupon(coupon.id, 'type', 'fixed')}
+                                      >
+                                        Fixed Amount (RM)
+                                      </button>
+                                    </div>
+                                  </div>
+
+                                  <div className="form-group">
+                                    <label className="form-label" htmlFor={`couponValue_${coupon.id}`}>
+                                      {coupon.type === 'percentage' ? 'Discount Percentage (%) *' : 'Discount Amount (RM) *'}
+                                    </label>
+                                    <input 
+                                      type="number"
+                                      id={`couponValue_${coupon.id}`}
+                                      className="form-input"
+                                      placeholder={coupon.type === 'percentage' ? 'E.g., 10' : 'E.g., 5'}
+                                      value={coupon.value}
+                                      onChange={(e) => updateCoupon(coupon.id, 'value', e.target.value)}
+                                    />
+                                    {hasValueErr && <div className="auth-error"><AlertCircle size={14} style={{ display: 'inline', marginRight: '4px', verticalAlign: 'middle' }} />{hasValueErr}</div>}
+                                  </div>
+
+                                  <div className="form-group">
+                                    <label className="form-label">Redemption Limit</label>
+                                    <div className="options-button-group">
+                                      <button 
+                                        type="button"
+                                        className={`option-btn ${coupon.limitType === 'unlimited' ? 'active' : ''}`}
+                                        onClick={() => updateCoupon(coupon.id, 'limitType', 'unlimited')}
+                                      >
+                                        Unlimited Customers
+                                      </button>
+                                      <button 
+                                        type="button"
+                                        className={`option-btn ${coupon.limitType === 'limited' ? 'active' : ''}`}
+                                        onClick={() => updateCoupon(coupon.id, 'limitType', 'limited')}
+                                      >
+                                        Set Limit
+                                      </button>
+                                    </div>
+                                  </div>
+
+                                  {coupon.limitType === 'limited' && (
+                                    <div className="form-group">
+                                      <label className="form-label" htmlFor={`couponLimitValue_${coupon.id}`}>Maximum Redeeming Customers *</label>
+                                      <input 
+                                        type="number"
+                                        id={`couponLimitValue_${coupon.id}`}
+                                        className="form-input"
+                                        placeholder="E.g., 100"
+                                        value={coupon.limitValue}
+                                        onChange={(e) => updateCoupon(coupon.id, 'limitValue', e.target.value)}
+                                      />
+                                      {hasLimitErr && <div className="auth-error"><AlertCircle size={14} style={{ display: 'inline', marginRight: '4px', verticalAlign: 'middle' }} />{hasLimitErr}</div>}
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
                     </div>
                   )}
 
@@ -664,10 +797,11 @@ export default function VendorForm() {
             vendorName={vendorName}
             logoUrl={logoPreviewUrl}
             joinCoupon={joinCoupon}
-            couponType={couponType}
-            couponValue={couponValue}
-            couponLimitType={couponLimitType}
-            couponLimitValue={couponLimitValue}
+            couponType={coupons[0]?.type || 'percentage'}
+            couponValue={coupons[0]?.value || ''}
+            couponLimitType={coupons[0]?.limitType || 'unlimited'}
+            couponLimitValue={coupons[0]?.limitValue || ''}
+            coupons={coupons}
             joinScratchWin={joinScratchWin}
             scratchWinPrize={scratchWinPrize}
             scratchWinLimitType={scratchWinLimitType}
@@ -697,14 +831,14 @@ export default function VendorForm() {
               <span className="success-summary-label">Contact Person:</span>
               <span className="success-summary-value">{contactName}</span>
             </div>
-            {joinCoupon && (
-              <div className="success-summary-item">
-                <span className="success-summary-label">Discount Coupon:</span>
+            {joinCoupon && coupons.map((c, index) => (
+              <div className="success-summary-item" key={c.id}>
+                <span className="success-summary-label">Coupon #{index + 1}:</span>
                 <span className="success-summary-value">
-                  {couponType === 'percentage' ? `${couponValue}%` : `RM${couponValue}`} OFF ({couponLimitType === 'unlimited' ? 'Unlimited' : `Limit ${couponLimitValue}`})
+                  {c.type === 'percentage' ? `${c.value}%` : `RM${c.value}`} OFF ({c.limitType === 'unlimited' ? 'Unlimited' : `Limit ${c.limitValue}`})
                 </span>
               </div>
-            )}
+            ))}
             {joinScratchWin && (
               <div className="success-summary-item">
                 <span className="success-summary-label">Gores & Menang Prize:</span>
@@ -735,8 +869,10 @@ export default function VendorForm() {
               setLogoFile(null);
               setLogoPreviewUrl('');
               setJoinCoupon(false);
-              setCouponValue('');
-              setCouponLimitValue('');
+              setCoupons([
+                { id: Date.now(), type: 'percentage', value: '', limitType: 'unlimited', limitValue: '' }
+              ]);
+              setExpandedCouponId(null);
               setJoinScratchWin(false);
               setScratchWinPrize('');
               setScratchWinLimitType('unlimited');

@@ -31,7 +31,8 @@ create table if not exists public.vendor_submissions (
 -- ---------------------------------------------------------------------
 alter table public.vendor_submissions
   add column if not exists scratch_win_limit_type text,
-  add column if not exists scratch_win_limit_value integer;
+  add column if not exists scratch_win_limit_value integer,
+  add column if not exists coupons jsonb;
 
 -- Helpful index for the admin dashboard's "newest first" ordering
 create index if not exists vendor_submissions_created_at_idx

@@ -165,10 +165,8 @@ export default function AdminDashboard() {
       'Contact Phone',
       'Logo URL',
       'Offers Discount Coupon',
-      'Coupon Type',
-      'Coupon Value',
-      'Coupon Limit Type',
-      'Coupon Limit Value',
+      'Total Coupons',
+      'Coupon Details',
       'Offers Scratch & Win',
       'Scratch & Win Prize',
       'Scratch Win Limit Type',
@@ -176,23 +174,42 @@ export default function AdminDashboard() {
     ];
 
     // Rows — every value passed through csvEscape so commas, quotes, and newlines are handled
-    const rows = submissions.map(sub => [
-      csvEscape(sub.id),
-      csvEscape(new Date(sub.created_at).toLocaleString()),
-      csvEscape(sub.vendor_name),
-      csvEscape(sub.contact_name),
-      csvEscape(sub.contact_phone),
-      csvEscape(sub.logo_url || ''),
-      csvEscape(sub.join_coupon ? 'YES' : 'NO'),
-      csvEscape(sub.coupon_type || ''),
-      csvEscape(sub.coupon_value || ''),
-      csvEscape(sub.coupon_limit_type || ''),
-      csvEscape(sub.coupon_limit_value || ''),
-      csvEscape(sub.join_scratch_win ? 'YES' : 'NO'),
-      csvEscape(sub.scratch_win_prize || ''),
-      csvEscape(sub.scratch_win_limit_type || ''),
-      csvEscape(sub.scratch_win_limit_value || '')
-    ]);
+    const rows = submissions.map(sub => {
+      let totalCoupons = 0;
+      let couponDetailsStr = '';
+
+      if (sub.join_coupon) {
+        if (sub.coupons && sub.coupons.length > 0) {
+          totalCoupons = sub.coupons.length;
+          couponDetailsStr = sub.coupons.map((c, idx) => {
+            const valStr = c.type === 'percentage' ? `${c.value}% OFF` : `RM${c.value} OFF`;
+            const limStr = c.limit_type === 'limited' ? `Limit: ${c.limit_value}` : 'Unlimited';
+            return `[Coupon #${idx + 1}] ${valStr} (${limStr})`;
+          }).join('; ');
+        } else {
+          totalCoupons = 1;
+          const valStr = sub.coupon_type === 'percentage' ? `${sub.coupon_value}% OFF` : `RM${sub.coupon_value} OFF`;
+          const limStr = sub.coupon_limit_type === 'limited' ? `Limit: ${sub.coupon_limit_value}` : 'Unlimited';
+          couponDetailsStr = `[Coupon #1] ${valStr} (${limStr})`;
+        }
+      }
+
+      return [
+        csvEscape(sub.id),
+        csvEscape(new Date(sub.created_at).toLocaleString()),
+        csvEscape(sub.vendor_name),
+        csvEscape(sub.contact_name),
+        csvEscape(sub.contact_phone),
+        csvEscape(sub.logo_url || ''),
+        csvEscape(sub.join_coupon ? 'YES' : 'NO'),
+        csvEscape(totalCoupons),
+        csvEscape(couponDetailsStr),
+        csvEscape(sub.join_scratch_win ? 'YES' : 'NO'),
+        csvEscape(sub.scratch_win_prize || ''),
+        csvEscape(sub.scratch_win_limit_type || ''),
+        csvEscape(sub.scratch_win_limit_value || '')
+      ];
+    });
 
     // Build CSV with BOM so Excel opens it correctly as UTF-8
     const csvString = [headers.join(','), ...rows.map(r => r.join(','))].join('\r\n');
@@ -461,7 +478,9 @@ export default function AdminDashboard() {
                         {sub.join_coupon && (
                           <span className="badge badge-coupon">
                             <Ticket size={12} />
-                            Discount Coupon
+                            {sub.coupons && sub.coupons.length > 1 
+                              ? `${sub.coupons.length} Discount Coupons` 
+                              : 'Discount Coupon'}
                           </span>
                         )}
                         {sub.join_scratch_win && (
@@ -545,25 +564,61 @@ export default function AdminDashboard() {
               {/* Coupon details */}
               {selectedSubmission.join_coupon && (
                 <div className="detail-section">
-                  <h4>Discount Coupon Offer</h4>
-                  <div className="detail-grid">
-                    <div className="detail-item">
-                      <label>Coupon Discount Value</label>
-                      <p style={{ color: 'var(--purple-500)', fontSize: '1.1rem' }}>
-                        {selectedSubmission.coupon_type === 'percentage' 
-                          ? `${selectedSubmission.coupon_value}% OFF` 
-                          : `RM${selectedSubmission.coupon_value} OFF`}
-                      </p>
+                  <h4>Discount Coupon Offers</h4>
+                  {selectedSubmission.coupons && selectedSubmission.coupons.length > 0 ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginTop: '0.5rem' }}>
+                      {selectedSubmission.coupons.map((coupon, idx) => (
+                        <div 
+                          key={idx}
+                          style={{
+                            backgroundColor: 'var(--slate-50)',
+                            border: '1px solid var(--slate-200)',
+                            borderRadius: 'var(--radius-sm)',
+                            padding: '0.75rem 1rem'
+                          }}
+                        >
+                          <div style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--rose-500)', marginBottom: '0.25rem' }}>
+                            COUPON #{idx + 1}
+                          </div>
+                          <div className="detail-grid" style={{ gridGap: '0.75rem' }}>
+                            <div className="detail-item">
+                              <label>Discount Value</label>
+                              <p style={{ fontWeight: 600, color: 'var(--slate-800)' }}>
+                                {coupon.type === 'percentage' ? `${coupon.value}% OFF` : `RM${coupon.value} OFF`}
+                              </p>
+                            </div>
+                            <div className="detail-item">
+                              <label>Redemption Limit</label>
+                              <p style={{ fontWeight: 600, color: 'var(--slate-800)' }}>
+                                {coupon.limit_type === 'unlimited' 
+                                  ? 'Unlimited Redemptions' 
+                                  : `Limit: First ${coupon.limit_value} customers`}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
                     </div>
-                    <div className="detail-item">
-                      <label>Redemption limits</label>
-                      <p>
-                        {selectedSubmission.coupon_limit_type === 'unlimited' 
-                          ? 'Unlimited Redemptions' 
-                          : `Limit: First ${selectedSubmission.coupon_limit_value} customers`}
-                      </p>
+                  ) : (
+                    <div className="detail-grid">
+                      <div className="detail-item">
+                        <label>Coupon Discount Value</label>
+                        <p style={{ color: 'var(--rose-500)', fontSize: '1.1rem' }}>
+                          {selectedSubmission.coupon_type === 'percentage' 
+                            ? `${selectedSubmission.coupon_value}% OFF` 
+                            : `RM${selectedSubmission.coupon_value} OFF`}
+                        </p>
+                      </div>
+                      <div className="detail-item">
+                        <label>Redemption limits</label>
+                        <p>
+                          {selectedSubmission.coupon_limit_type === 'unlimited' 
+                            ? 'Unlimited Redemptions' 
+                            : `Limit: First ${selectedSubmission.coupon_limit_value} customers`}
+                        </p>
+                      </div>
                     </div>
-                  </div>
+                  )}
                 </div>
               )}
 
