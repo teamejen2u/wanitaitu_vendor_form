@@ -648,7 +648,7 @@ export default function VendorForm() {
           </motion.div>
           <h2 className="success-title">We've received your details!</h2>
           <p className="success-subtitle">
-            Thank you for participating in the Wanita Itu event promotions. Your promotional offers are successfully configured and our customer app will showcase them.
+            Thank you for participating in the Wanita Itu event. Our team will now configure your promotional offers and showcase them to customers on the event app.
           </p>
 
           <div className="success-summary">

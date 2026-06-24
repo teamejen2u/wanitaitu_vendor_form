@@ -37,8 +37,8 @@ function App() {
 
   return (
     <div className="app-container">
-      {/* Header section — hidden during welcome page */}
-      {!(showWelcome && !isAdminRoute) && (
+      {/* Header section — only shown on admin route */}
+      {isAdminRoute && (
         <header className="app-header">
           <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.5rem' }}>
             <img 
@@ -55,15 +55,7 @@ function App() {
               WANITA ITU
             </span>
           </div>
-          
-          {isAdminRoute ? (
-            <h1>Organizer Portal</h1>
-          ) : (
-            <>
-              <h1>Vendor Promotion Portal</h1>
-              <p>Select and configure your brand offers for the upcoming Wanita Itu event</p>
-            </>
-          )}
+          <h1>Organizer Portal</h1>
         </header>
       )}
 
