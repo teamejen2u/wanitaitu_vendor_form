@@ -14,8 +14,8 @@
   --gold-500: hsl(42, 60%, 55%);
   --gold-600: hsl(42, 70%, 45%);
 
-  --purple-500: hsl(262, 80%, 50%);
-  --purple-100: hsl(262, 85%, 96%);
+  --purple-500: hsl(340, 75%, 45%);
+  --purple-100: hsl(340, 80%, 94%);
 
   --slate-50: hsl(210, 40%, 98%);
   --slate-100: hsl(210, 40%, 96%);
@@ -159,10 +159,8 @@ header.app-header p {
   flex: 1;
   height: 2px;
   background-color: var(--slate-200);
-  margin: 0 0.75rem;
+  margin: 15px 0.75rem 0 0.75rem; /* 15px = badge center (32px / 2 - 1px) */
   max-width: 80px;
-  align-self: center;
-  margin-top: 16px; /* vertically align with badge center */
 }
 
 .step-line.completed {
@@ -186,8 +184,7 @@ header.app-header p {
   }
 
   .step-line {
-    margin: 0 0.35rem;
-    margin-top: 14px;
+    margin: 13px 0.35rem 0 0.35rem; /* 13px = badge center (28px / 2 - 1px) */
     max-width: 32px;
   }
 }
