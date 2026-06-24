@@ -825,7 +825,7 @@ export default function VendorForm() {
                                       id={`scratchPrize_${scratch.id}`}
                                       className="form-input"
                                       rows="3"
-                                      placeholder="E.g., Free sample of our Signature cookies with no minimum spend! or Buy 1 Free 1 on all cosmetics."
+                                      placeholder="E.g., Free sample of our Signature cookies with no minimum spend!"
                                       style={{ resize: 'vertical' }}
                                       value={scratch.prize}
                                       onChange={(e) => updateScratchPrize(scratch.id, 'prize', e.target.value)}
