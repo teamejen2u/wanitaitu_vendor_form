@@ -168,9 +168,8 @@ export default function AdminDashboard() {
       'Total Coupons',
       'Coupon Details',
       'Offers Scratch & Win',
-      'Scratch & Win Prize',
-      'Scratch Win Limit Type',
-      'Scratch Win Limit Value'
+      'Total Scratch Prizes',
+      'Scratch Prizes Details'
     ];
 
     // Rows — every value passed through csvEscape so commas, quotes, and newlines are handled
@@ -194,6 +193,23 @@ export default function AdminDashboard() {
         }
       }
 
+      let totalScratch = 0;
+      let scratchDetailsStr = '';
+
+      if (sub.join_scratch_win) {
+        if (sub.scratch_prizes && sub.scratch_prizes.length > 0) {
+          totalScratch = sub.scratch_prizes.length;
+          scratchDetailsStr = sub.scratch_prizes.map((s, idx) => {
+            const limStr = s.limit_type === 'limited' ? `Limit: ${s.limit_value}` : 'Unlimited';
+            return `[Card #${idx + 1}] ${s.prize} (${limStr})`;
+          }).join('; ');
+        } else {
+          totalScratch = 1;
+          const limStr = sub.scratch_win_limit_type === 'limited' ? `Limit: ${sub.scratch_win_limit_value}` : 'Unlimited';
+          scratchDetailsStr = `[Card #1] ${sub.scratch_win_prize} (${limStr})`;
+        }
+      }
+
       return [
         csvEscape(sub.id),
         csvEscape(new Date(sub.created_at).toLocaleString()),
@@ -205,9 +221,8 @@ export default function AdminDashboard() {
         csvEscape(totalCoupons),
         csvEscape(couponDetailsStr),
         csvEscape(sub.join_scratch_win ? 'YES' : 'NO'),
-        csvEscape(sub.scratch_win_prize || ''),
-        csvEscape(sub.scratch_win_limit_type || ''),
-        csvEscape(sub.scratch_win_limit_value || '')
+        csvEscape(totalScratch),
+        csvEscape(scratchDetailsStr)
       ];
     });
 
@@ -486,7 +501,9 @@ export default function AdminDashboard() {
                         {sub.join_scratch_win && (
                           <span className="badge badge-scratch">
                             <Sparkles size={12} />
-                            Gores & Menang
+                            {sub.scratch_prizes && sub.scratch_prizes.length > 1
+                              ? `${sub.scratch_prizes.length} Scratch Cards`
+                              : 'Gores & Menang'}
                           </span>
                         )}
                       </div>
@@ -625,26 +642,64 @@ export default function AdminDashboard() {
               {/* Scratch card details */}
               {selectedSubmission.join_scratch_win && (
                 <div className="detail-section">
-                  <h4>Gores & Menang (Scratch & Win) Prize</h4>
-                  <div style={{ backgroundColor: 'var(--slate-50)', padding: '1rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--slate-200)', marginBottom: '1rem' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', color: 'var(--gold-600)', fontWeight: 700, fontSize: '0.85rem', marginBottom: '0.25rem' }}>
-                      <Sparkles size={14} />
-                      <span>OFFERED PRIZE</span>
+                  <h4>Gores & Menang (Scratch & Win) Prizes</h4>
+                  {selectedSubmission.scratch_prizes && selectedSubmission.scratch_prizes.length > 0 ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginTop: '0.5rem' }}>
+                      {selectedSubmission.scratch_prizes.map((scratch, idx) => (
+                        <div 
+                          key={idx}
+                          style={{
+                            backgroundColor: 'var(--slate-50)',
+                            border: '1px solid var(--slate-200)',
+                            borderRadius: 'var(--radius-sm)',
+                            padding: '0.75rem 1rem'
+                          }}
+                        >
+                          <div style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--gold-600)', marginBottom: '0.25rem' }}>
+                            CARD #{idx + 1}
+                          </div>
+                          <div className="detail-grid" style={{ gridGap: '0.75rem' }}>
+                            <div className="detail-item" style={{ gridColumn: 'span 2' }}>
+                              <label>Prize Description</label>
+                              <p style={{ fontWeight: 600, color: 'var(--slate-800)', wordBreak: 'break-word' }}>
+                                {scratch.prize}
+                              </p>
+                            </div>
+                            <div className="detail-item">
+                              <label>Prize Limit</label>
+                              <p style={{ fontWeight: 600, color: 'var(--slate-800)' }}>
+                                {scratch.limit_type === 'unlimited'
+                                  ? 'Unlimited Winners'
+                                  : `Limit: First ${scratch.limit_value} winners`}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
                     </div>
-                    <p style={{ fontWeight: 600, color: 'var(--slate-800)', wordBreak: 'break-word' }}>
-                      {selectedSubmission.scratch_win_prize}
-                    </p>
-                  </div>
-                  <div className="detail-grid">
-                    <div className="detail-item">
-                      <label>Prize Limit</label>
-                      <p>
-                        {selectedSubmission.scratch_win_limit_type === 'unlimited'
-                          ? 'Unlimited Winners'
-                          : `Limit: First ${selectedSubmission.scratch_win_limit_value} winners`}
-                      </p>
-                    </div>
-                  </div>
+                  ) : (
+                    <>
+                      <div style={{ backgroundColor: 'var(--slate-50)', padding: '1rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--slate-200)', marginBottom: '1rem' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', color: 'var(--gold-600)', fontWeight: 700, fontSize: '0.85rem', marginBottom: '0.25rem' }}>
+                          <Sparkles size={14} />
+                          <span>OFFERED PRIZE</span>
+                        </div>
+                        <p style={{ fontWeight: 600, color: 'var(--slate-800)', wordBreak: 'break-word' }}>
+                          {selectedSubmission.scratch_win_prize}
+                        </p>
+                      </div>
+                      <div className="detail-grid">
+                        <div className="detail-item">
+                          <label>Prize Limit</label>
+                          <p>
+                            {selectedSubmission.scratch_win_limit_type === 'unlimited'
+                              ? 'Unlimited Winners'
+                              : `Limit: First ${selectedSubmission.scratch_win_limit_value} winners`}
+                          </p>
+                        </div>
+                      </div>
+                    </>
+                  )}
                 </div>
               )}
             </div>

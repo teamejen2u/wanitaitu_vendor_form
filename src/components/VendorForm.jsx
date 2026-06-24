@@ -78,9 +78,49 @@ export default function VendorForm() {
   };
 
   const [joinScratchWin, setJoinScratchWin] = useState(false);
-  const [scratchWinPrize, setScratchWinPrize] = useState('');
-  const [scratchWinLimitType, setScratchWinLimitType] = useState('unlimited'); // 'unlimited' or 'limited'
-  const [scratchWinLimitValue, setScratchWinLimitValue] = useState('');
+  const [scratchPrizes, setScratchPrizes] = useState([
+    { id: 1, prize: '', limitType: 'unlimited', limitValue: '' }
+  ]);
+  const [expandedScratchId, setExpandedScratchId] = useState(1);
+
+  const addScratchPrize = () => {
+    if (scratchPrizes.length >= 3) return; // Limit to max 3
+    const newId = Date.now();
+    setScratchPrizes(prev => [
+      ...prev,
+      { id: newId, prize: '', limitType: 'unlimited', limitValue: '' }
+    ]);
+    setExpandedScratchId(newId);
+  };
+
+  const updateScratchPrize = (id, field, val) => {
+    setScratchPrizes(prev => prev.map(s => s.id === id ? { ...s, [field]: val } : s));
+    
+    // Clear validation error when user types or updates the input
+    const errorKey = `scratch_${id}_${field}`;
+    if (validationErrors[errorKey]) {
+      setValidationErrors(prev => ({ ...prev, [errorKey]: null }));
+    }
+  };
+
+  const removeScratchPrize = (id) => {
+    if (scratchPrizes.length <= 1) return;
+    const remaining = scratchPrizes.filter(s => s.id !== id);
+    setScratchPrizes(remaining);
+    
+    // If the expanded scratch card is removed, expand the first remaining one
+    if (expandedScratchId === id) {
+      setExpandedScratchId(remaining[0].id);
+    }
+
+    // Clean up any validation errors for this scratch card
+    setValidationErrors(prev => {
+      const copy = { ...prev };
+      delete copy[`scratch_${id}_prize`];
+      delete copy[`scratch_${id}_limitValue`];
+      return copy;
+    });
+  };
 
   // Drag and drop state
   const [dragActive, setDragActive] = useState(false);
@@ -175,17 +215,19 @@ export default function VendorForm() {
         });
       }
       if (joinScratchWin) {
-        if (!scratchWinPrize.trim()) {
-          errors.scratchWinPrize = 'Prize description is required';
-        }
-
-        if (scratchWinLimitType === 'limited') {
-          if (!scratchWinLimitValue) {
-            errors.scratchWinLimitValue = 'Limit amount is required';
-          } else if (isNaN(scratchWinLimitValue) || parseInt(scratchWinLimitValue) <= 0) {
-            errors.scratchWinLimitValue = 'Please enter a valid positive number';
+        scratchPrizes.forEach((scratch, index) => {
+          if (!scratch.prize.trim()) {
+            errors[`scratch_${scratch.id}_prize`] = `Prize description is required (Card #${index + 1})`;
           }
-        }
+
+          if (scratch.limitType === 'limited') {
+            if (!scratch.limitValue) {
+              errors[`scratch_${scratch.id}_limitValue`] = `Limit amount is required (Card #${index + 1})`;
+            } else if (isNaN(scratch.limitValue) || parseInt(scratch.limitValue) <= 0) {
+              errors[`scratch_${scratch.id}_limitValue`] = `Please enter a valid positive number (Card #${index + 1})`;
+            }
+          }
+        });
       }
     }
 
@@ -268,9 +310,14 @@ export default function VendorForm() {
           limit_value: c.limitType === 'limited' ? parseInt(c.limitValue) : null
         })) : null,
         join_scratch_win: joinScratchWin,
-        scratch_win_prize: joinScratchWin ? scratchWinPrize : null,
-        scratch_win_limit_type: joinScratchWin ? scratchWinLimitType : null,
-        scratch_win_limit_value: (joinScratchWin && scratchWinLimitType === 'limited') ? parseInt(scratchWinLimitValue) : null
+        scratch_win_prize: (joinScratchWin && scratchPrizes.length > 0) ? scratchPrizes[0].prize : null,
+        scratch_win_limit_type: (joinScratchWin && scratchPrizes.length > 0) ? scratchPrizes[0].limitType : null,
+        scratch_win_limit_value: (joinScratchWin && scratchPrizes.length > 0 && scratchPrizes[0].limitType === 'limited' && scratchPrizes[0].limitValue) ? parseInt(scratchPrizes[0].limitValue) : null,
+        scratch_prizes: joinScratchWin ? scratchPrizes.map(s => ({
+          prize: s.prize,
+          limit_type: s.limitType,
+          limit_value: s.limitType === 'limited' ? parseInt(s.limitValue) : null
+        })) : null
       };
 
       // Save payload
@@ -688,70 +735,167 @@ export default function VendorForm() {
 
                   {/* Scratch & Win Settings */}
                   {joinScratchWin && (
-                    <div style={{ padding: '1rem', border: '1px solid var(--slate-200)', borderRadius: 'var(--radius-md)' }}>
+                    <div style={{ marginBottom: '2.5rem' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
                         <Sparkles size={18} color="var(--gold-500)" />
-                        <h3 style={{ fontFamily: 'var(--font-display)', fontWeight: 700 }}>Gores & Menang Prize</h3>
+                        <h3 style={{ fontFamily: 'var(--font-display)', fontWeight: 700 }}>Gores & Menang Prizes</h3>
                       </div>
 
-                      <div className="form-group">
-                        <label className="form-label" htmlFor="scratchWinPrize">What prize/reward will winning customers receive? *</label>
-                        <textarea 
-                          id="scratchWinPrize"
-                          className="form-input"
-                          rows="3"
-                          placeholder="E.g., Free sample of our Signature cookies with no minimum spend! or Buy 1 Free 1 on all cosmetics."
-                          style={{ resize: 'vertical' }}
-                          value={scratchWinPrize}
-                          onChange={(e) => {
-                            setScratchWinPrize(e.target.value);
-                            if (validationErrors.scratchWinPrize) {
-                              setValidationErrors(prev => ({ ...prev, scratchWinPrize: null }));
-                            }
-                          }}
-                        />
-                        {validationErrors.scratchWinPrize && <div className="auth-error"><AlertCircle size={14} style={{ display: 'inline', marginRight: '4px', verticalAlign: 'middle' }} />{validationErrors.scratchWinPrize}</div>}
-                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                        {scratchPrizes.map((scratch, index) => {
+                          const isExpanded = scratch.id === expandedScratchId || scratchPrizes.length === 1;
+                          const hasPrizeErr = validationErrors[`scratch_${scratch.id}_prize`];
+                          const hasLimitErr = validationErrors[`scratch_${scratch.id}_limitValue`];
 
-                      <div className="form-group">
-                        <label className="form-label">Prize Limit</label>
-                        <div className="options-button-group">
-                          <button 
+                          return (
+                            <div 
+                              key={scratch.id} 
+                              style={{ 
+                                border: '1px solid var(--slate-200)', 
+                                borderRadius: 'var(--radius-md)',
+                                backgroundColor: 'var(--white)',
+                                overflow: 'hidden'
+                              }}
+                            >
+                              {/* Accordion / Card Header */}
+                              <div 
+                                onClick={() => setExpandedScratchId(isExpanded ? null : scratch.id)}
+                                style={{ 
+                                  padding: '0.75rem 1rem', 
+                                  backgroundColor: 'var(--slate-50)', 
+                                  borderBottom: isExpanded ? '1px solid var(--slate-200)' : 'none',
+                                  display: 'flex', 
+                                  alignItems: 'center', 
+                                  justifyContent: 'space-between',
+                                  cursor: 'pointer',
+                                  userSelect: 'none'
+                                }}
+                              >
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                  <span style={{ 
+                                    fontWeight: 700, 
+                                    fontSize: '0.85rem', 
+                                    color: 'var(--slate-700)',
+                                    backgroundColor: 'var(--slate-200)',
+                                    padding: '2px 6px',
+                                    borderRadius: '4px'
+                                  }}>
+                                    #{index + 1}
+                                  </span>
+                                  <span style={{ fontWeight: 600, fontSize: '0.9rem', color: 'var(--slate-800)' }}>
+                                    {scratch.prize 
+                                      ? `Prize: ${scratch.prize}` 
+                                      : 'New Scratch & Win Prize'}
+                                  </span>
+                                  {scratch.limitType === 'limited' && scratch.limitValue && (
+                                    <span style={{ fontSize: '0.75rem', color: 'var(--slate-500)', fontStyle: 'italic' }}>
+                                      (Limit: {scratch.limitValue})
+                                    </span>
+                                  )}
+                                </div>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }} onClick={(e) => e.stopPropagation()}>
+                                  {scratchPrizes.length > 1 && (
+                                    <button 
+                                      type="button" 
+                                      onClick={() => removeScratchPrize(scratch.id)}
+                                      style={{ 
+                                        background: 'none', 
+                                        border: 'none', 
+                                        color: 'var(--rose-500)', 
+                                        cursor: 'pointer',
+                                        padding: '4px',
+                                        borderRadius: '4px'
+                                      }}
+                                    >
+                                      <Trash2 size={16} />
+                                    </button>
+                                  )}
+                                  <span style={{ fontSize: '0.8rem', color: 'var(--slate-400)', cursor: 'pointer' }} onClick={() => setExpandedScratchId(isExpanded ? null : scratch.id)}>
+                                    {isExpanded ? 'Collapse' : 'Edit'}
+                                  </span>
+                                </div>
+                              </div>
+
+                              {/* Card Inputs */}
+                              {isExpanded && (
+                                <div style={{ padding: '1rem' }}>
+                                  <div className="form-group">
+                                    <label className="form-label" htmlFor={`scratchPrize_${scratch.id}`}>What prize/reward will winning customers receive? *</label>
+                                    <textarea 
+                                      id={`scratchPrize_${scratch.id}`}
+                                      className="form-input"
+                                      rows="3"
+                                      placeholder="E.g., Free sample of our Signature cookies with no minimum spend! or Buy 1 Free 1 on all cosmetics."
+                                      style={{ resize: 'vertical' }}
+                                      value={scratch.prize}
+                                      onChange={(e) => updateScratchPrize(scratch.id, 'prize', e.target.value)}
+                                    />
+                                    {hasPrizeErr && <div className="auth-error"><AlertCircle size={14} style={{ display: 'inline', marginRight: '4px', verticalAlign: 'middle' }} />{hasPrizeErr}</div>}
+                                  </div>
+
+                                  <div className="form-group">
+                                    <label className="form-label">Prize Limit</label>
+                                    <div className="options-button-group">
+                                      <button 
+                                        type="button"
+                                        className={`option-btn ${scratch.limitType === 'unlimited' ? 'active' : ''}`}
+                                        onClick={() => updateScratchPrize(scratch.id, 'limitType', 'unlimited')}
+                                      >
+                                        Unlimited Winners
+                                      </button>
+                                      <button 
+                                        type="button"
+                                        className={`option-btn ${scratch.limitType === 'limited' ? 'active' : ''}`}
+                                        onClick={() => updateScratchPrize(scratch.id, 'limitType', 'limited')}
+                                      >
+                                        Set Limit
+                                      </button>
+                                    </div>
+                                  </div>
+
+                                  {scratch.limitType === 'limited' && (
+                                    <div className="form-group">
+                                      <label className="form-label" htmlFor={`scratchLimitValue_${scratch.id}`}>Maximum Number of Winners *</label>
+                                      <input 
+                                        type="number"
+                                        id={`scratchLimitValue_${scratch.id}`}
+                                        className="form-input"
+                                        placeholder="E.g., 50"
+                                        value={scratch.limitValue}
+                                        onChange={(e) => updateScratchPrize(scratch.id, 'limitValue', e.target.value)}
+                                      />
+                                      {hasLimitErr && <div className="auth-error"><AlertCircle size={14} style={{ display: 'inline', marginRight: '4px', verticalAlign: 'middle' }} />{hasLimitErr}</div>}
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+
+                        {scratchPrizes.length < 3 && (
+                          <button
                             type="button"
-                            className={`option-btn ${scratchWinLimitType === 'unlimited' ? 'active' : ''}`}
-                            onClick={() => setScratchWinLimitType('unlimited')}
-                          >
-                            Unlimited Winners
-                          </button>
-                          <button 
-                            type="button"
-                            className={`option-btn ${scratchWinLimitType === 'limited' ? 'active' : ''}`}
-                            onClick={() => setScratchWinLimitType('limited')}
-                          >
-                            Set Limit
-                          </button>
-                        </div>
-                      </div>
-
-                      {scratchWinLimitType === 'limited' && (
-                        <div className="form-group">
-                          <label className="form-label" htmlFor="scratchWinLimitValue">Maximum Number of Winners *</label>
-                          <input 
-                            type="number"
-                            id="scratchWinLimitValue"
-                            className="form-input"
-                            placeholder="E.g., 50"
-                            value={scratchWinLimitValue}
-                            onChange={(e) => {
-                              setScratchWinLimitValue(e.target.value);
-                              if (validationErrors.scratchWinLimitValue) {
-                                setValidationErrors(prev => ({ ...prev, scratchWinLimitValue: null }));
-                              }
+                            className="btn btn-secondary"
+                            onClick={addScratchPrize}
+                            style={{ 
+                              width: '100%', 
+                              justifyContent: 'center', 
+                              borderStyle: 'dashed', 
+                              borderWidth: '1.5px',
+                              backgroundColor: 'transparent',
+                              color: 'var(--rose-500)',
+                              borderColor: 'var(--rose-300)',
+                              marginTop: '0.5rem',
+                              height: '42px',
+                              fontSize: '0.9rem',
+                              fontWeight: 600
                             }}
-                          />
-                          {validationErrors.scratchWinLimitValue && <div className="auth-error"><AlertCircle size={14} style={{ display: 'inline', marginRight: '4px', verticalAlign: 'middle' }} />{validationErrors.scratchWinLimitValue}</div>}
-                        </div>
-                      )}
+                          >
+                            + Add Another Scratch Card
+                          </button>
+                        )}
+                      </div>
                     </div>
                   )}
 
@@ -814,9 +958,10 @@ export default function VendorForm() {
             couponLimitValue={coupons[0]?.limitValue || ''}
             coupons={coupons}
             joinScratchWin={joinScratchWin}
-            scratchWinPrize={scratchWinPrize}
-            scratchWinLimitType={scratchWinLimitType}
-            scratchWinLimitValue={scratchWinLimitValue}
+            scratchWinPrize={scratchPrizes[0]?.prize || ''}
+            scratchWinLimitType={scratchPrizes[0]?.limitType || 'unlimited'}
+            scratchWinLimitValue={scratchPrizes[0]?.limitValue || ''}
+            scratchPrizes={scratchPrizes}
           />
         </div>
       ) : (
@@ -850,22 +995,22 @@ export default function VendorForm() {
                 </span>
               </div>
             ))}
-            {joinScratchWin && (
-              <div className="success-summary-item">
-                <span className="success-summary-label">Gores & Menang Prize:</span>
-                <span className="success-summary-value" style={{ maxWidth: '200px', textAlign: 'right', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  {scratchWinPrize}
-                </span>
-              </div>
-            )}
-            {joinScratchWin && (
-              <div className="success-summary-item">
-                <span className="success-summary-label">Prize Limit:</span>
-                <span className="success-summary-value">
-                  {scratchWinLimitType === 'unlimited' ? 'Unlimited Winners' : `First ${scratchWinLimitValue} winners`}
-                </span>
-              </div>
-            )}
+            {joinScratchWin && scratchPrizes.map((s, index) => (
+              <React.Fragment key={s.id}>
+                <div className="success-summary-item">
+                  <span className="success-summary-label">Scratch Prize #{index + 1}:</span>
+                  <span className="success-summary-value" style={{ maxWidth: '200px', textAlign: 'right', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={s.prize}>
+                    {s.prize}
+                  </span>
+                </div>
+                <div className="success-summary-item" style={{ marginTop: '-4px', marginBottom: '8px' }}>
+                  <span className="success-summary-label" style={{ fontSize: '0.75rem', opacity: 0.8 }}>Limit #{index + 1}:</span>
+                  <span className="success-summary-value" style={{ fontSize: '0.75rem', opacity: 0.8 }}>
+                    {s.limitType === 'unlimited' ? 'Unlimited Winners' : `First ${s.limitValue} winners`}
+                  </span>
+                </div>
+              </React.Fragment>
+            ))}
           </div>
 
           <button 
@@ -885,9 +1030,10 @@ export default function VendorForm() {
               ]);
               setExpandedCouponId(null);
               setJoinScratchWin(false);
-              setScratchWinPrize('');
-              setScratchWinLimitType('unlimited');
-              setScratchWinLimitValue('');
+              setScratchPrizes([
+                { id: Date.now(), prize: '', limitType: 'unlimited', limitValue: '' }
+              ]);
+              setExpandedScratchId(null);
             }}
           >
             Submit Another Vendor Form

@@ -15,7 +15,8 @@ export default function LivePreview({
   joinScratchWin = false,
   scratchWinPrize = '',
   scratchWinLimitType = 'unlimited',
-  scratchWinLimitValue = ''
+  scratchWinLimitValue = '',
+  scratchPrizes = []
 }) {
   const [activeTab, setActiveTab] = useState('coupon');
 
@@ -23,9 +24,11 @@ export default function LivePreview({
     { type: couponType, value: couponValue, limitType: couponLimitType, limitValue: couponLimitValue }
   ];
 
-  const displayVendorName = vendorName.trim() || 'Your Brand Name';
-  const displayPrize = scratchWinPrize.trim() || 'E.g., Free Gift with RM50 Spend';
+  const scratchPrizesToRender = (scratchPrizes && scratchPrizes.length > 0) ? scratchPrizes : [
+    { prize: scratchWinPrize, limitType: scratchWinLimitType, limitValue: scratchWinLimitValue }
+  ];
 
+  const displayVendorName = vendorName.trim() || 'Your Brand Name';
   const hasBoth = joinCoupon && joinScratchWin;
   
   return (
@@ -148,38 +151,53 @@ export default function LivePreview({
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: -10 }}
                 transition={{ duration: 0.2 }}
+                style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}
               >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem', fontSize: '0.85rem', color: 'var(--slate-500)', fontWeight: 600 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.85rem', color: 'var(--slate-500)', fontWeight: 600 }}>
                   <Sparkles size={14} color="var(--gold-500)" />
-                  <span>CUSTOMER SCRATCH & WIN</span>
+                  <span>CUSTOMER SCRATCH & WIN{scratchPrizesToRender.length > 1 ? 'S' : ''}</span>
                 </div>
 
-                <ScratchCard
-                  vendorName={displayVendorName}
-                  prize={displayPrize}
-                  width={280}
-                  height={160}
-                />
+                {scratchPrizesToRender.map((scratch, idx) => {
+                  const currentPrize = scratch.prize.trim() || 'E.g., Free Gift with RM50 Spend';
+                  
+                  return (
+                    <div key={scratch.id || idx} style={{ display: 'flex', flexDirection: 'column' }}>
+                      {scratchPrizesToRender.length > 1 && (
+                        <div style={{ fontSize: '0.75rem', color: 'var(--gold-600)', fontWeight: 700, marginBottom: '0.25rem' }}>
+                          SCRATCH CARD #{idx + 1}
+                        </div>
+                      )}
+                      
+                      <ScratchCard
+                        vendorName={displayVendorName}
+                        prize={currentPrize}
+                        width={280}
+                        height={160}
+                      />
 
-                <div style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  marginTop: '0.5rem',
-                  padding: '0.5rem 0.75rem',
-                  backgroundColor: 'var(--slate-50)',
-                  borderRadius: 'var(--radius-sm)',
-                  fontSize: '0.75rem',
-                  color: 'var(--slate-600)',
-                  fontWeight: 500
-                }}>
-                  <span>Wanita Itu Event Exclusive</span>
-                  <span>
-                    {scratchWinLimitType === 'unlimited'
-                      ? 'Unlimited Prizes'
-                      : `Limit: First ${scratchWinLimitValue || '50'} winners`}
-                  </span>
-                </div>
+                      <div style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        marginTop: '0.5rem',
+                        padding: '0.5rem 0.75rem',
+                        backgroundColor: 'var(--slate-50)',
+                        borderRadius: 'var(--radius-sm)',
+                        fontSize: '0.75rem',
+                        color: 'var(--slate-600)',
+                        fontWeight: 500
+                      }}>
+                        <span>Wanita Itu Event Exclusive</span>
+                        <span>
+                          {scratch.limitType === 'unlimited'
+                            ? 'Unlimited Prizes'
+                            : `Limit: First ${scratch.limitValue || '50'} winners`}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
               </motion.div>
             )}
           </AnimatePresence>
