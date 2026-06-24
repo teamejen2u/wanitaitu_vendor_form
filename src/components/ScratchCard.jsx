@@ -187,40 +187,20 @@ export default function ScratchCard({
             zIndex: 1
           }}
         >
-          <AnimatePresence>
-            {isRevealed && (
-              <motion.div
-                initial={{ scale: 0.5, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                transition={{ type: 'spring', stiffness: 300, damping: 15 }}
-                style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.25rem' }}
-              >
-                <motion.div
-                  initial={{ rotate: 0 }}
-                  animate={{ rotate: [0, -10, 10, -5, 5, 0] }}
-                  transition={{ duration: 0.6, delay: 0.2 }}
-                >
-                  <Sparkles size={28} color="#e11d48" />
-                </motion.div>
-                <div style={{ fontWeight: 800, fontSize: '0.85rem', color: '#e11d48', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                  Tahniah! You Won!
-                </div>
-                <div style={{ fontWeight: 700, fontSize: '0.95rem', color: '#1e293b', wordBreak: 'break-word', lineHeight: 1.3, maxWidth: '90%' }}>
-                  {prize}
-                </div>
-                <div style={{ fontSize: '0.7rem', color: '#64748b', marginTop: '0.25rem' }}>
-                  from {vendorName}
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-
-          {!isRevealed && (
-            <div style={{ opacity: 0.3, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.25rem' }}>
-              <Sparkles size={24} color="#b8952f" />
-              <div style={{ fontWeight: 600, fontSize: '0.75rem', color: '#92400e' }}>Prize hidden here</div>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.25rem' }}>
+            <div style={{ rotate: 0 }}>
+              <Sparkles size={28} color="#e11d48" />
             </div>
-          )}
+            <div style={{ fontWeight: 800, fontSize: '0.85rem', color: '#e11d48', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              Tahniah! You Won!
+            </div>
+            <div style={{ fontWeight: 700, fontSize: '0.95rem', color: '#1e293b', wordBreak: 'break-word', lineHeight: 1.3, maxWidth: '90%' }}>
+              {prize}
+            </div>
+            <div style={{ fontSize: '0.7rem', color: '#64748b', marginTop: '0.25rem' }}>
+              from {vendorName}
+            </div>
+          </div>
         </div>
 
         {/* Canvas scratch layer (on top) */}
