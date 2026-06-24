@@ -37,27 +37,7 @@ function App() {
 
   return (
     <div className="app-container">
-      {/* Header section — only shown on admin route */}
-      {isAdminRoute && (
-        <header className="app-header">
-          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.5rem' }}>
-            <img 
-              src="https://oalebkgsqedfimyjilsf.supabase.co/storage/v1/object/public/vendor-logos/logos/cdbbdd52-317d-4d85-b02b-2618df9bafae.avif" 
-              alt="Wanita Itu Logo"
-              style={{ 
-                width: '48px', 
-                height: '48px', 
-                borderRadius: '8px',
-                objectFit: 'cover'
-              }}
-            />
-            <span style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: '1.4rem', color: 'var(--rose-700)', letterSpacing: '-0.02em' }}>
-              WANITA ITU
-            </span>
-          </div>
-          <h1>Organizer Portal</h1>
-        </header>
-      )}
+
 
       {/* Main Content */}
       <main style={{ flex: 1 }}>

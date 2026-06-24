@@ -638,14 +638,6 @@ export default function VendorForm() {
           animate={{ opacity: 1, scale: 1 }}
           transition={{ type: 'spring', stiffness: 200, damping: 20 }}
         >
-          <motion.div 
-            className="success-icon-wrapper"
-            initial={{ scale: 0 }}
-            animate={{ scale: 1 }}
-            transition={{ type: 'spring', stiffness: 300, damping: 15, delay: 0.2 }}
-          >
-            <CheckCircle2 size={40} />
-          </motion.div>
           <h2 className="success-title">We've received your details!</h2>
           <p className="success-subtitle">
             Thank you for participating in the Wanita Itu event. Our team will now configure your promotional offers and showcase them to customers on the event app.
