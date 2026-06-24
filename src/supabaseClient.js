@@ -87,6 +87,25 @@ export const mockDb = {
     return { data: null, error: null };
   },
 
+  // Update submission
+  async updateSubmission(id, data) {
+    console.warn('⚠️ Supabase not configured. Using Mock DB fallback.');
+    await new Promise((resolve) => setTimeout(resolve, 800));
+
+    const submissions = this.getSubmissions();
+    const index = submissions.findIndex(sub => sub.id === id);
+    if (index !== -1) {
+      submissions[index] = {
+        ...submissions[index],
+        ...data,
+        id // enforce original id
+      };
+      localStorage.setItem(this.STORAGE_KEY, JSON.stringify(submissions));
+      return { data: submissions[index], error: null };
+    }
+    return { data: null, error: new Error('Submission not found') };
+  },
+
   // Get submissions from localStorage
   getSubmissions() {
     const data = localStorage.getItem(this.STORAGE_KEY);

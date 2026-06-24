@@ -63,6 +63,23 @@ create policy "Authenticated can read submissions"
   to authenticated
   using (true);
 
+-- Allow only logged-in organizers to delete submissions
+drop policy if exists "Authenticated can delete submissions" on public.vendor_submissions;
+create policy "Authenticated can delete submissions"
+  on public.vendor_submissions
+  for delete
+  to authenticated
+  using (true);
+
+-- Allow only logged-in organizers to update submissions
+drop policy if exists "Authenticated can update submissions" on public.vendor_submissions;
+create policy "Authenticated can update submissions"
+  on public.vendor_submissions
+  for update
+  to authenticated
+  using (true)
+  with check (true);
+
 -- ---------------------------------------------------------------------
 -- 3. Storage bucket: vendor-logos (public read so logos display)
 -- ---------------------------------------------------------------------

@@ -35,6 +35,11 @@ export default function AdminDashboard() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedSubmission, setSelectedSubmission] = useState(null);
 
+  const [isEditing, setIsEditing] = useState(false);
+  const [editForm, setEditForm] = useState(null);
+  const [editErrors, setEditErrors] = useState({});
+  const [saveLoading, setSaveLoading] = useState(false);
+
   // Default passcode for local-dev fallback (no Supabase keys set)
   const REQUIRED_PASSCODE = import.meta.env.VITE_ADMIN_PASSCODE || 'wanitaitu';
 
@@ -191,6 +196,238 @@ export default function AdminDashboard() {
       });
     } catch {
       return dateStr;
+    }
+  };
+
+  const startEditing = () => {
+    const sub = selectedSubmission;
+    if (!sub) return;
+
+    let normalizedCoupons = [];
+    if (sub.join_coupon) {
+      if (sub.coupons && sub.coupons.length > 0) {
+        normalizedCoupons = JSON.parse(JSON.stringify(sub.coupons));
+      } else {
+        normalizedCoupons = [{
+          type: sub.coupon_type || 'percentage',
+          value: sub.coupon_value || '',
+          limit_type: sub.coupon_limit_type || 'unlimited',
+          limit_value: sub.coupon_limit_value || ''
+        }];
+      }
+    }
+
+    let normalizedScratch = [];
+    if (sub.join_scratch_win) {
+      if (sub.scratch_prizes && sub.scratch_prizes.length > 0) {
+        normalizedScratch = JSON.parse(JSON.stringify(sub.scratch_prizes));
+      } else {
+        normalizedScratch = [{
+          prize: sub.scratch_win_prize || '',
+          limit_type: sub.scratch_win_limit_type || 'unlimited',
+          limit_value: sub.scratch_win_limit_value || ''
+        }];
+      }
+    }
+
+    setEditForm({
+      id: sub.id,
+      vendor_name: sub.vendor_name || '',
+      contact_name: sub.contact_name || '',
+      contact_phone: sub.contact_phone || '',
+      logo_url: sub.logo_url || '',
+      join_coupon: !!sub.join_coupon,
+      coupons: normalizedCoupons,
+      join_scratch_win: !!sub.join_scratch_win,
+      scratch_prizes: normalizedScratch
+    });
+    setEditErrors({});
+    setIsEditing(true);
+  };
+
+  const handleAddCoupon = () => {
+    if (editForm.coupons.length >= 3) return;
+    setEditForm(prev => ({
+      ...prev,
+      coupons: [
+        ...prev.coupons,
+        { type: 'percentage', value: '', limit_type: 'unlimited', limit_value: '' }
+      ]
+    }));
+  };
+
+  const handleUpdateCoupon = (index, field, value) => {
+    setEditForm(prev => {
+      const updated = [...prev.coupons];
+      updated[index] = { ...updated[index], [field]: value };
+      return { ...prev, coupons: updated };
+    });
+
+    const errorKey = `coupon_${index}_${field}`;
+    if (editErrors[errorKey]) {
+      setEditErrors(prev => {
+        const copy = { ...prev };
+        delete copy[errorKey];
+        return copy;
+      });
+    }
+  };
+
+  const handleRemoveCoupon = (index) => {
+    setEditForm(prev => {
+      const updated = prev.coupons.filter((_, idx) => idx !== index);
+      return { ...prev, coupons: updated };
+    });
+  };
+
+  const handleAddScratch = () => {
+    if (editForm.scratch_prizes.length >= 3) return;
+    setEditForm(prev => ({
+      ...prev,
+      scratch_prizes: [
+        ...prev.scratch_prizes,
+        { prize: '', limit_type: 'unlimited', limit_value: '' }
+      ]
+    }));
+  };
+
+  const handleUpdateScratch = (index, field, value) => {
+    setEditForm(prev => {
+      const updated = [...prev.scratch_prizes];
+      updated[index] = { ...updated[index], [field]: value };
+      return { ...prev, scratch_prizes: updated };
+    });
+
+    const errorKey = `scratch_${index}_${field}`;
+    if (editErrors[errorKey]) {
+      setEditErrors(prev => {
+        const copy = { ...prev };
+        delete copy[errorKey];
+        return copy;
+      });
+    }
+  };
+
+  const handleRemoveScratch = (index) => {
+    setEditForm(prev => {
+      const updated = prev.scratch_prizes.filter((_, idx) => idx !== index);
+      return { ...prev, scratch_prizes: updated };
+    });
+  };
+
+  const validateEditForm = () => {
+    const errors = {};
+    if (!editForm.vendor_name.trim()) errors.vendor_name = 'Brand/Vendor name is required';
+    if (!editForm.contact_name.trim()) errors.contact_name = 'Contact person is required';
+    if (!editForm.contact_phone.trim()) errors.contact_phone = 'WhatsApp number is required';
+
+    if (editForm.join_coupon) {
+      if (editForm.coupons.length === 0) {
+        errors.coupons_general = 'Please add at least one coupon or disable coupons.';
+      } else {
+        editForm.coupons.forEach((c, index) => {
+          const valNum = parseFloat(c.value);
+          if (!c.value || isNaN(valNum) || valNum <= 0) {
+            errors[`coupon_${index}_value`] = 'Enter a valid discount value';
+          } else if (c.type === 'percentage' && valNum > 100) {
+            errors[`coupon_${index}_value`] = 'Percentage cannot exceed 100%';
+          }
+
+          if (c.limit_type === 'limited') {
+            const limNum = parseInt(c.limit_value, 10);
+            if (!c.limit_value || isNaN(limNum) || limNum <= 0) {
+              errors[`coupon_${index}_limit_value`] = 'Enter limit count';
+            }
+          }
+        });
+      }
+    }
+
+    if (editForm.join_scratch_win) {
+      if (editForm.scratch_prizes.length === 0) {
+        errors.scratch_general = 'Please add at least one scratch prize or disable scratch & win.';
+      } else {
+        editForm.scratch_prizes.forEach((s, index) => {
+          if (!s.prize.trim()) {
+            errors[`scratch_${index}_prize`] = 'Prize description is required';
+          }
+
+          if (s.limit_type === 'limited') {
+            const limNum = parseInt(s.limit_value, 10);
+            if (!s.limit_value || isNaN(limNum) || limNum <= 0) {
+              errors[`scratch_${index}_limit_value`] = 'Enter limit count';
+            }
+          }
+        });
+      }
+    }
+
+    setEditErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  const handleSaveChanges = async (e) => {
+    e.preventDefault();
+    if (!validateEditForm()) return;
+
+    setSaveLoading(true);
+    setError(null);
+    try {
+      const firstCoupon = editForm.join_coupon && editForm.coupons[0] ? editForm.coupons[0] : null;
+      const firstScratch = editForm.join_scratch_win && editForm.scratch_prizes[0] ? editForm.scratch_prizes[0] : null;
+
+      const payload = {
+        vendor_name: editForm.vendor_name.trim(),
+        contact_name: editForm.contact_name.trim(),
+        contact_phone: editForm.contact_phone.trim(),
+        join_coupon: editForm.join_coupon,
+        coupons: editForm.join_coupon ? editForm.coupons.map(c => ({
+          type: c.type,
+          value: parseFloat(c.value),
+          limit_type: c.limit_type,
+          limit_value: c.limit_type === 'limited' ? parseInt(c.limit_value, 10) : null
+        })) : [],
+
+        coupon_type: firstCoupon ? firstCoupon.type : null,
+        coupon_value: firstCoupon ? parseFloat(firstCoupon.value) : null,
+        coupon_limit_type: firstCoupon ? firstCoupon.limit_type : null,
+        coupon_limit_value: firstCoupon && firstCoupon.limit_type === 'limited' ? parseInt(firstCoupon.limit_value, 10) : null,
+
+        join_scratch_win: editForm.join_scratch_win,
+        scratch_prizes: editForm.join_scratch_win ? editForm.scratch_prizes.map(s => ({
+          prize: s.prize.trim(),
+          limit_type: s.limit_type,
+          limit_value: s.limit_type === 'limited' ? parseInt(s.limit_value, 10) : null
+        })) : [],
+
+        scratch_win_prize: firstScratch ? firstScratch.prize.trim() : null,
+        scratch_win_limit_type: firstScratch ? firstScratch.limit_type : null,
+        scratch_win_limit_value: firstScratch && firstScratch.limit_type === 'limited' ? parseInt(firstScratch.limit_value, 10) : null
+      };
+
+      let result;
+      if (isSupabaseConfigured) {
+        result = await supabase
+          .from('vendor_submissions')
+          .update(payload)
+          .eq('id', editForm.id)
+          .select();
+      } else {
+        result = await mockDb.updateSubmission(editForm.id, payload);
+      }
+
+      if (result.error) throw result.error;
+
+      const updatedRecord = (Array.isArray(result.data) ? result.data[0] : result.data) || { ...selectedSubmission, ...payload };
+
+      setSubmissions(prev => prev.map(sub => sub.id === editForm.id ? updatedRecord : sub));
+      setSelectedSubmission(updatedRecord);
+      setIsEditing(false);
+    } catch (err) {
+      console.error('Error saving updates:', err);
+      setError('Could not save modifications: ' + (err.message || err));
+    } finally {
+      setSaveLoading(false);
     }
   };
 
@@ -588,186 +825,529 @@ export default function AdminDashboard() {
 
       {/* Details Modal overlay */}
       {selectedSubmission && (
-        <div className="modal-overlay" onClick={() => setSelectedSubmission(null)}>
+        <div className="modal-overlay" onClick={() => !isEditing && setSelectedSubmission(null)}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
-              <h3>Vendor Campaign Details</h3>
-              <button className="modal-close-btn" onClick={() => setSelectedSubmission(null)}>
+              <h3>{isEditing ? 'Edit Vendor Campaign' : 'Vendor Campaign Details'}</h3>
+              <button 
+                className="modal-close-btn" 
+                onClick={() => {
+                  if (isEditing) {
+                    if (window.confirm('Discard unsaved changes?')) {
+                      setIsEditing(false);
+                    }
+                  } else {
+                    setSelectedSubmission(null);
+                  }
+                }}
+              >
                 <X size={20} />
               </button>
             </div>
             <div className="modal-body">
-              {/* Profile details */}
-              <div className="detail-section">
-                <h4>Vendor Profile</h4>
-                <div className="detail-logo-container">
-                  {selectedSubmission.logo_url ? (
-                    <img src={selectedSubmission.logo_url} alt="Logo" className="detail-logo" />
-                  ) : (
-                    <div className="table-logo-fallback" style={{ width: '64px', height: '64px', fontSize: '1.5rem' }}>
-                      {selectedSubmission.vendor_name.charAt(0).toUpperCase()}
-                    </div>
-                  )}
-                  <div>
-                    <div style={{ fontWeight: 700, fontSize: '1.2rem', color: 'var(--slate-800)' }}>
-                      {selectedSubmission.vendor_name}
-                    </div>
-                    <div style={{ fontSize: '0.85rem', color: 'var(--slate-500)' }}>
-                      Submitted: {formatMYDateTime(selectedSubmission.created_at)}
-                    </div>
-                  </div>
-                </div>
-                
-                <div className="detail-grid" style={{ marginTop: '1rem' }}>
-                  <div className="detail-item">
-                    <label>Contact Person</label>
-                    <p>{selectedSubmission.contact_name}</p>
-                  </div>
-                  <div className="detail-item">
-                    <label>WhatsApp / Phone</label>
-                    <p>
-                      <a 
-                        href={`https://wa.me/${selectedSubmission.contact_phone.replace(/[^0-9]/g, '')}`} 
-                        target="_blank" 
-                        rel="noopener noreferrer"
-                        style={{ color: 'var(--rose-500)', textDecoration: 'none' }}
-                      >
-                        {selectedSubmission.contact_phone}
-                      </a>
-                    </p>
-                  </div>
-                </div>
-              </div>
+              {isEditing ? (
+                <div>
+                  {/* Vendor Profile Edit */}
+                  <div className="detail-section">
+                    <h4>Vendor Profile (Edit)</h4>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                      <div className="form-group">
+                        <label className="form-label" style={{ fontWeight: 600 }}>Brand / Vendor Name</label>
+                        <input
+                          type="text"
+                          className="form-input"
+                          value={editForm.vendor_name}
+                          onChange={(e) => setEditForm(prev => ({ ...prev, vendor_name: e.target.value }))}
+                          placeholder="E.g. Ejen2u Bateri"
+                        />
+                        {editErrors.vendor_name && <span style={{ color: 'var(--rose-500)', fontSize: '0.8rem', marginTop: '0.25rem', display: 'block' }}>{editErrors.vendor_name}</span>}
+                      </div>
 
-              {/* Coupon details */}
-              {selectedSubmission.join_coupon && (
-                <div className="detail-section">
-                  <h4>Discount Coupon Offers</h4>
-                  {selectedSubmission.coupons && selectedSubmission.coupons.length > 0 ? (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginTop: '0.5rem' }}>
-                      {selectedSubmission.coupons.map((coupon, idx) => (
-                        <div 
-                          key={idx}
-                          style={{
-                            backgroundColor: 'var(--slate-50)',
-                            border: '1px solid var(--slate-200)',
-                            borderRadius: 'var(--radius-sm)',
-                            padding: '0.75rem 1rem'
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                        <div className="form-group">
+                          <label className="form-label" style={{ fontWeight: 600 }}>Contact Person</label>
+                          <input
+                            type="text"
+                            className="form-input"
+                            value={editForm.contact_name}
+                            onChange={(e) => setEditForm(prev => ({ ...prev, contact_name: e.target.value }))}
+                            placeholder="E.g. Ali"
+                          />
+                          {editErrors.contact_name && <span style={{ color: 'var(--rose-500)', fontSize: '0.8rem', marginTop: '0.25rem', display: 'block' }}>{editErrors.contact_name}</span>}
+                        </div>
+
+                        <div className="form-group">
+                          <label className="form-label" style={{ fontWeight: 600 }}>WhatsApp / Phone Number</label>
+                          <input
+                            type="text"
+                            className="form-input"
+                            value={editForm.contact_phone}
+                            onChange={(e) => setEditForm(prev => ({ ...prev, contact_phone: e.target.value }))}
+                            placeholder="E.g. 60123456789"
+                          />
+                          {editErrors.contact_phone && <span style={{ color: 'var(--rose-500)', fontSize: '0.8rem', marginTop: '0.25rem', display: 'block' }}>{editErrors.contact_phone}</span>}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Discount Coupons Campaign Edit */}
+                  <div className="detail-section" style={{ borderTop: '1px solid var(--slate-100)', paddingTop: '1rem' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                      <h4 style={{ margin: 0 }}>Discount Coupon Offers</h4>
+                      <label style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontWeight: 600 }}>
+                        <input
+                          type="checkbox"
+                          checked={editForm.join_coupon}
+                          onChange={(e) => {
+                            const checked = e.target.checked;
+                            setEditForm(prev => ({
+                              ...prev,
+                              join_coupon: checked,
+                              coupons: checked && prev.coupons.length === 0 
+                                ? [{ type: 'percentage', value: '', limit_type: 'unlimited', limit_value: '' }] 
+                                : prev.coupons
+                            }));
                           }}
-                        >
-                          <div style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--rose-500)', marginBottom: '0.25rem' }}>
-                            COUPON #{idx + 1}
+                        />
+                        <span>Enable Coupons</span>
+                      </label>
+                    </div>
+
+                    {editForm.join_coupon && (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                        {editForm.coupons.map((coupon, idx) => (
+                          <div 
+                            key={idx} 
+                            style={{ 
+                              padding: '1rem', 
+                              backgroundColor: 'var(--slate-50)', 
+                              border: '1px solid var(--slate-200)', 
+                              borderRadius: 'var(--radius-sm)',
+                              position: 'relative'
+                            }}
+                          >
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
+                              <span style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--rose-500)' }}>
+                                COUPON #{idx + 1}
+                              </span>
+                              {editForm.coupons.length > 1 && (
+                                <button 
+                                  type="button" 
+                                  onClick={() => handleRemoveCoupon(idx)}
+                                  style={{ background: 'none', border: 'none', color: 'var(--rose-500)', fontSize: '0.8rem', cursor: 'pointer', fontWeight: 600 }}
+                                >
+                                  Remove
+                                </button>
+                              )}
+                            </div>
+
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                              <div className="form-group">
+                                <label className="form-label" style={{ fontSize: '0.8rem' }}>Discount Type</label>
+                                <select 
+                                  className="form-input"
+                                  value={coupon.type}
+                                  onChange={(e) => handleUpdateCoupon(idx, 'type', e.target.value)}
+                                >
+                                  <option value="percentage">Percentage (%)</option>
+                                  <option value="fixed">Fixed Amount (RM)</option>
+                                </select>
+                              </div>
+
+                              <div className="form-group">
+                                <label className="form-label" style={{ fontSize: '0.8rem' }}>Discount Value</label>
+                                <input
+                                  type="number"
+                                  className="form-input"
+                                  placeholder={coupon.type === 'percentage' ? 'E.g. 10' : 'E.g. 5'}
+                                  value={coupon.value}
+                                  onChange={(e) => handleUpdateCoupon(idx, 'value', e.target.value)}
+                                />
+                                {editErrors[`coupon_${idx}_value`] && (
+                                  <span style={{ color: 'var(--rose-500)', fontSize: '0.75rem', marginTop: '0.25rem', display: 'block' }}>
+                                    {editErrors[`coupon_${idx}_value`]}
+                                  </span>
+                                )}
+                              </div>
+
+                              <div className="form-group">
+                                <label className="form-label" style={{ fontSize: '0.8rem' }}>Limit Type</label>
+                                <select 
+                                  className="form-input"
+                                  value={coupon.limit_type}
+                                  onChange={(e) => handleUpdateCoupon(idx, 'limit_type', e.target.value)}
+                                >
+                                  <option value="unlimited">Unlimited</option>
+                                  <option value="limited">Limited</option>
+                                </select>
+                              </div>
+
+                              <div className="form-group">
+                                <label className="form-label" style={{ fontSize: '0.8rem' }}>Limit Value</label>
+                                <input
+                                  type="number"
+                                  className="form-input"
+                                  placeholder="E.g. 100"
+                                  value={coupon.limit_value}
+                                  disabled={coupon.limit_type === 'unlimited'}
+                                  onChange={(e) => handleUpdateCoupon(idx, 'limit_value', e.target.value)}
+                                />
+                                {coupon.limit_type === 'limited' && editErrors[`coupon_${idx}_limit_value`] && (
+                                  <span style={{ color: 'var(--rose-500)', fontSize: '0.75rem', marginTop: '0.25rem', display: 'block' }}>
+                                    {editErrors[`coupon_${idx}_limit_value`]}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
                           </div>
-                          <div className="detail-grid" style={{ gridGap: '0.75rem' }}>
-                            <div className="detail-item">
-                              <label>Discount Value</label>
-                              <p style={{ fontWeight: 600, color: 'var(--slate-800)' }}>
-                                {coupon.type === 'percentage' ? `${coupon.value}% OFF` : `RM${coupon.value} OFF`}
-                              </p>
+                        ))}
+
+                        {editForm.coupons.length < 3 && (
+                          <button
+                            type="button"
+                            className="btn btn-secondary"
+                            onClick={handleAddCoupon}
+                            style={{ alignSelf: 'flex-start', borderStyle: 'dashed', borderColor: 'var(--rose-200)' }}
+                          >
+                            + Add Another Coupon
+                          </button>
+                        )}
+                        {editErrors.coupons_general && (
+                          <div style={{ color: 'var(--rose-500)', fontSize: '0.85rem' }}>{editErrors.coupons_general}</div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Gores & Menang Campaign Edit */}
+                  <div className="detail-section" style={{ borderTop: '1px solid var(--slate-100)', paddingTop: '1rem' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                      <h4 style={{ margin: 0 }}>Gores & Menang Prizes</h4>
+                      <label style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontWeight: 600 }}>
+                        <input
+                          type="checkbox"
+                          checked={editForm.join_scratch_win}
+                          onChange={(e) => {
+                            const checked = e.target.checked;
+                            setEditForm(prev => ({
+                              ...prev,
+                              join_scratch_win: checked,
+                              scratch_prizes: checked && prev.scratch_prizes.length === 0 
+                                ? [{ prize: '', limit_type: 'unlimited', limit_value: '' }] 
+                                : prev.scratch_prizes
+                            }));
+                          }}
+                        />
+                        <span>Enable Scratch & Win</span>
+                      </label>
+                    </div>
+
+                    {editForm.join_scratch_win && (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                        {editForm.scratch_prizes.map((scratch, idx) => (
+                          <div 
+                            key={idx} 
+                            style={{ 
+                              padding: '1rem', 
+                              backgroundColor: 'var(--slate-50)', 
+                              border: '1px solid var(--slate-200)', 
+                              borderRadius: 'var(--radius-sm)',
+                              position: 'relative'
+                            }}
+                          >
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
+                              <span style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--gold-600)' }}>
+                                CARD #{idx + 1}
+                              </span>
+                              {editForm.scratch_prizes.length > 1 && (
+                                <button 
+                                  type="button" 
+                                  onClick={() => handleRemoveScratch(idx)}
+                                  style={{ background: 'none', border: 'none', color: 'var(--rose-500)', fontSize: '0.8rem', cursor: 'pointer', fontWeight: 600 }}
+                                >
+                                  Remove
+                                </button>
+                              )}
                             </div>
-                            <div className="detail-item">
-                              <label>Redemption Limit</label>
-                              <p style={{ fontWeight: 600, color: 'var(--slate-800)' }}>
-                                {coupon.limit_type === 'unlimited' 
-                                  ? 'Unlimited Redemptions' 
-                                  : `Limit: First ${coupon.limit_value} customers`}
-                              </p>
+
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                              <div className="form-group">
+                                <label className="form-label" style={{ fontSize: '0.8rem' }}>Prize Description</label>
+                                <input
+                                  type="text"
+                                  className="form-input"
+                                  placeholder="E.g. Free 1 box of cookies!"
+                                  value={scratch.prize}
+                                  onChange={(e) => handleUpdateScratch(idx, 'prize', e.target.value)}
+                                />
+                                {editErrors[`scratch_${idx}_prize`] && (
+                                  <span style={{ color: 'var(--rose-500)', fontSize: '0.75rem', marginTop: '0.25rem', display: 'block' }}>
+                                    {editErrors[`scratch_${idx}_prize`]}
+                                  </span>
+                                )}
+                              </div>
+
+                              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                                <div className="form-group">
+                                  <label className="form-label" style={{ fontSize: '0.8rem' }}>Limit Type</label>
+                                  <select 
+                                    className="form-input"
+                                    value={scratch.limit_type}
+                                    onChange={(e) => handleUpdateScratch(idx, 'limit_type', e.target.value)}
+                                  >
+                                    <option value="unlimited">Unlimited</option>
+                                    <option value="limited">Limited</option>
+                                  </select>
+                                </div>
+
+                                <div className="form-group">
+                                  <label className="form-label" style={{ fontSize: '0.8rem' }}>Winners Limit</label>
+                                  <input
+                                    type="number"
+                                    className="form-input"
+                                    placeholder="E.g. 50"
+                                    value={scratch.limit_value}
+                                    disabled={scratch.limit_type === 'unlimited'}
+                                    onChange={(e) => handleUpdateScratch(idx, 'limit_value', e.target.value)}
+                                  />
+                                  {scratch.limit_type === 'limited' && editErrors[`scratch_${idx}_limit_value`] && (
+                                    <span style={{ color: 'var(--rose-500)', fontSize: '0.75rem', marginTop: '0.25rem', display: 'block' }}>
+                                      {editErrors[`scratch_${idx}_limit_value`]}
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
                             </div>
+                          </div>
+                        ))}
+
+                        {editForm.scratch_prizes.length < 3 && (
+                          <button
+                            type="button"
+                            className="btn btn-secondary"
+                            onClick={handleAddScratch}
+                            style={{ alignSelf: 'flex-start', borderStyle: 'dashed', borderColor: 'var(--gold-300)' }}
+                          >
+                            + Add Another Scratch Prize
+                          </button>
+                        )}
+                        {editErrors.scratch_general && (
+                          <div style={{ color: 'var(--rose-500)', fontSize: '0.85rem' }}>{editErrors.scratch_general}</div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <>
+                  {/* Profile details */}
+                  <div className="detail-section">
+                    <h4>Vendor Profile</h4>
+                    <div className="detail-logo-container">
+                      {selectedSubmission.logo_url ? (
+                        <img src={selectedSubmission.logo_url} alt="Logo" className="detail-logo" />
+                      ) : (
+                        <div className="table-logo-fallback" style={{ width: '64px', height: '64px', fontSize: '1.5rem' }}>
+                          {selectedSubmission.vendor_name.charAt(0).toUpperCase()}
+                        </div>
+                      )}
+                      <div>
+                        <div style={{ fontWeight: 700, fontSize: '1.2rem', color: 'var(--slate-800)' }}>
+                          {selectedSubmission.vendor_name}
+                        </div>
+                        <div style={{ fontSize: '0.85rem', color: 'var(--slate-500)' }}>
+                          Submitted: {formatMYDateTime(selectedSubmission.created_at)}
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="detail-grid" style={{ marginTop: '1rem' }}>
+                      <div className="detail-item">
+                        <label>Contact Person</label>
+                        <p>{selectedSubmission.contact_name}</p>
+                      </div>
+                      <div className="detail-item">
+                        <label>WhatsApp / Phone</label>
+                        <p>
+                          <a 
+                            href={`https://wa.me/${selectedSubmission.contact_phone.replace(/[^0-9]/g, '')}`} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            style={{ color: 'var(--rose-500)', textDecoration: 'none' }}
+                          >
+                            {selectedSubmission.contact_phone}
+                          </a>
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Coupon details */}
+                  {selectedSubmission.join_coupon && (
+                    <div className="detail-section">
+                      <h4>Discount Coupon Offers</h4>
+                      {selectedSubmission.coupons && selectedSubmission.coupons.length > 0 ? (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginTop: '0.5rem' }}>
+                          {selectedSubmission.coupons.map((coupon, idx) => (
+                            <div 
+                              key={idx}
+                              style={{
+                                backgroundColor: 'var(--slate-50)',
+                                border: '1px solid var(--slate-200)',
+                                borderRadius: 'var(--radius-sm)',
+                                padding: '0.75rem 1rem'
+                              }}
+                            >
+                              <div style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--rose-500)', marginBottom: '0.25rem' }}>
+                                COUPON #{idx + 1}
+                              </div>
+                              <div className="detail-grid" style={{ gridGap: '0.75rem' }}>
+                                <div className="detail-item">
+                                  <label>Discount Value</label>
+                                  <p style={{ fontWeight: 600, color: 'var(--slate-800)' }}>
+                                    {coupon.type === 'percentage' ? `${coupon.value}% OFF` : `RM${coupon.value} OFF`}
+                                  </p>
+                                </div>
+                                <div className="detail-item">
+                                  <label>Redemption Limit</label>
+                                  <p style={{ fontWeight: 600, color: 'var(--slate-800)' }}>
+                                    {coupon.limit_type === 'unlimited' 
+                                      ? 'Unlimited Redemptions' 
+                                      : `Limit: First ${coupon.limit_value} customers`}
+                                  </p>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="detail-grid">
+                          <div className="detail-item">
+                            <label>Coupon Discount Value</label>
+                            <p style={{ color: 'var(--rose-500)', fontSize: '1.1rem' }}>
+                              {selectedSubmission.coupon_type === 'percentage' 
+                                ? `${selectedSubmission.coupon_value}% OFF` 
+                                : `RM${selectedSubmission.coupon_value} OFF`}
+                            </p>
+                          </div>
+                          <div className="detail-item">
+                            <label>Redemption limits</label>
+                            <p>
+                              {selectedSubmission.coupon_limit_type === 'unlimited' 
+                                ? 'Unlimited Redemptions' 
+                                : `Limit: First ${selectedSubmission.coupon_limit_value} customers`}
+                            </p>
                           </div>
                         </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="detail-grid">
-                      <div className="detail-item">
-                        <label>Coupon Discount Value</label>
-                        <p style={{ color: 'var(--rose-500)', fontSize: '1.1rem' }}>
-                          {selectedSubmission.coupon_type === 'percentage' 
-                            ? `${selectedSubmission.coupon_value}% OFF` 
-                            : `RM${selectedSubmission.coupon_value} OFF`}
-                        </p>
-                      </div>
-                      <div className="detail-item">
-                        <label>Redemption limits</label>
-                        <p>
-                          {selectedSubmission.coupon_limit_type === 'unlimited' 
-                            ? 'Unlimited Redemptions' 
-                            : `Limit: First ${selectedSubmission.coupon_limit_value} customers`}
-                        </p>
-                      </div>
+                      )}
                     </div>
                   )}
-                </div>
-              )}
 
-              {/* Scratch card details */}
-              {selectedSubmission.join_scratch_win && (
-                <div className="detail-section">
-                  <h4>Gores & Menang (Scratch & Win) Prizes</h4>
-                  {selectedSubmission.scratch_prizes && selectedSubmission.scratch_prizes.length > 0 ? (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginTop: '0.5rem' }}>
-                      {selectedSubmission.scratch_prizes.map((scratch, idx) => (
-                        <div 
-                          key={idx}
-                          style={{
-                            backgroundColor: 'var(--slate-50)',
-                            border: '1px solid var(--slate-200)',
-                            borderRadius: 'var(--radius-sm)',
-                            padding: '0.75rem 1rem'
-                          }}
-                        >
-                          <div style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--gold-600)', marginBottom: '0.25rem' }}>
-                            CARD #{idx + 1}
-                          </div>
-                          <div className="detail-grid" style={{ gridGap: '0.75rem' }}>
-                            <div className="detail-item" style={{ gridColumn: 'span 2' }}>
-                              <label>Prize Description</label>
-                              <p style={{ fontWeight: 600, color: 'var(--slate-800)', wordBreak: 'break-word' }}>
-                                {scratch.prize}
-                              </p>
+                  {/* Scratch card details */}
+                  {selectedSubmission.join_scratch_win && (
+                    <div className="detail-section">
+                      <h4>Gores & Menang (Scratch & Win) Prizes</h4>
+                      {selectedSubmission.scratch_prizes && selectedSubmission.scratch_prizes.length > 0 ? (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginTop: '0.5rem' }}>
+                          {selectedSubmission.scratch_prizes.map((scratch, idx) => (
+                            <div 
+                              key={idx}
+                              style={{
+                                backgroundColor: 'var(--slate-50)',
+                                border: '1px solid var(--slate-200)',
+                                borderRadius: 'var(--radius-sm)',
+                                padding: '0.75rem 1rem'
+                              }}
+                            >
+                              <div style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--gold-600)', marginBottom: '0.25rem' }}>
+                                CARD #{idx + 1}
+                              </div>
+                              <div className="detail-grid" style={{ gridGap: '0.75rem' }}>
+                                <div className="detail-item" style={{ gridColumn: 'span 2' }}>
+                                  <label>Prize Description</label>
+                                  <p style={{ fontWeight: 600, color: 'var(--slate-800)', wordBreak: 'break-word' }}>
+                                    {scratch.prize}
+                                  </p>
+                                </div>
+                                <div className="detail-item">
+                                  <label>Prize Limit</label>
+                                  <p style={{ fontWeight: 600, color: 'var(--slate-800)' }}>
+                                    {scratch.limit_type === 'unlimited'
+                                      ? 'Unlimited Winners'
+                                      : `Limit: First ${scratch.limit_value} winners`}
+                                  </p>
+                                </div>
+                              </div>
                             </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <>
+                          <div style={{ backgroundColor: 'var(--slate-50)', padding: '1rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--slate-200)', marginBottom: '1rem' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', color: 'var(--gold-600)', fontWeight: 700, fontSize: '0.85rem', marginBottom: '0.25rem' }}>
+                              <Sparkles size={14} />
+                              <span>OFFERED PRIZE</span>
+                            </div>
+                            <p style={{ fontWeight: 600, color: 'var(--slate-800)', wordBreak: 'break-word' }}>
+                              {selectedSubmission.scratch_win_prize}
+                            </p>
+                          </div>
+                          <div className="detail-grid">
                             <div className="detail-item">
                               <label>Prize Limit</label>
-                              <p style={{ fontWeight: 600, color: 'var(--slate-800)' }}>
-                                {scratch.limit_type === 'unlimited'
+                              <p>
+                                {selectedSubmission.scratch_win_limit_type === 'unlimited'
                                   ? 'Unlimited Winners'
-                                  : `Limit: First ${scratch.limit_value} winners`}
+                                  : `Limit: First ${selectedSubmission.scratch_win_limit_value} winners`}
                               </p>
                             </div>
                           </div>
-                        </div>
-                      ))}
+                        </>
+                      )}
                     </div>
-                  ) : (
-                    <>
-                      <div style={{ backgroundColor: 'var(--slate-50)', padding: '1rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--slate-200)', marginBottom: '1rem' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', color: 'var(--gold-600)', fontWeight: 700, fontSize: '0.85rem', marginBottom: '0.25rem' }}>
-                          <Sparkles size={14} />
-                          <span>OFFERED PRIZE</span>
-                        </div>
-                        <p style={{ fontWeight: 600, color: 'var(--slate-800)', wordBreak: 'break-word' }}>
-                          {selectedSubmission.scratch_win_prize}
-                        </p>
-                      </div>
-                      <div className="detail-grid">
-                        <div className="detail-item">
-                          <label>Prize Limit</label>
-                          <p>
-                            {selectedSubmission.scratch_win_limit_type === 'unlimited'
-                              ? 'Unlimited Winners'
-                              : `Limit: First ${selectedSubmission.scratch_win_limit_value} winners`}
-                          </p>
-                        </div>
-                      </div>
-                    </>
                   )}
-                </div>
+                </>
               )}
             </div>
-            <div style={{ padding: '1rem 1.5rem', borderTop: '1px solid var(--slate-100)', display: 'flex', justifyContent: 'flex-end' }}>
-              <button className="btn btn-secondary" onClick={() => setSelectedSubmission(null)}>
-                Close Details
-              </button>
+            <div style={{ padding: '1rem 1.5rem', borderTop: '1px solid var(--slate-100)', display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
+              {isEditing ? (
+                <>
+                  <button 
+                    type="button" 
+                    className="btn btn-secondary" 
+                    onClick={() => {
+                      if (window.confirm('Discard unsaved changes?')) {
+                        setIsEditing(false);
+                      }
+                    }}
+                    disabled={saveLoading}
+                  >
+                    Cancel
+                  </button>
+                  <button 
+                    type="button" 
+                    className="btn btn-primary" 
+                    onClick={handleSaveChanges}
+                    disabled={saveLoading}
+                  >
+                    {saveLoading ? 'Saving...' : 'Save Changes'}
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button 
+                    className="btn btn-secondary" 
+                    style={{ borderColor: 'var(--purple-200)', color: 'var(--purple-600)' }}
+                    onClick={startEditing}
+                  >
+                    Edit Offer
+                  </button>
+                  <button className="btn btn-primary" onClick={() => setSelectedSubmission(null)}>
+                    Close Details
+                  </button>
+                </>
+              )}
             </div>
           </div>
         </div>
