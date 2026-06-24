@@ -11,7 +11,8 @@ import {
   Unlock, 
   RefreshCw,
   LogOut,
-  Mail
+  Mail,
+  Trash2
 } from 'lucide-react';
 import { supabase, isSupabaseConfigured, mockDb } from '../supabaseClient';
 
@@ -142,6 +143,57 @@ export default function AdminDashboard() {
     }
   }, [isAuthenticated]);
 
+  const handleDeleteSubmission = async (id, vendorName) => {
+    if (!window.confirm(`Are you sure you want to delete the submission for "${vendorName}"?`)) {
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+    try {
+      let result;
+      if (isSupabaseConfigured) {
+        result = await supabase
+          .from('vendor_submissions')
+          .delete()
+          .eq('id', id);
+      } else {
+        result = await mockDb.deleteSubmission(id);
+      }
+
+      if (result.error) throw result.error;
+
+      // Update state
+      setSubmissions(prev => prev.filter(sub => sub.id !== id));
+      if (selectedSubmission && selectedSubmission.id === id) {
+        setSelectedSubmission(null);
+      }
+    } catch (err) {
+      console.error('Error deleting submission:', err);
+      setError('Could not delete submission: ' + (err.message || err));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const formatMYDateTime = (dateStr) => {
+    if (!dateStr) return '';
+    try {
+      return new Date(dateStr).toLocaleString('en-MY', {
+        timeZone: 'Asia/Kuala_Lumpur',
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: true
+      });
+    } catch {
+      return dateStr;
+    }
+  };
+
   // Escape a CSV value: wrap in quotes if it contains commas, quotes, or newlines
   const csvEscape = (val) => {
     if (val == null) return '';
@@ -212,7 +264,7 @@ export default function AdminDashboard() {
 
       return [
         csvEscape(sub.id),
-        csvEscape(new Date(sub.created_at).toLocaleString()),
+        csvEscape(formatMYDateTime(sub.created_at)),
         csvEscape(sub.vendor_name),
         csvEscape(sub.contact_name),
         csvEscape(sub.contact_phone),
@@ -508,14 +560,23 @@ export default function AdminDashboard() {
                         )}
                       </div>
                     </td>
-                    <td>
-                      <button 
-                        onClick={() => setSelectedSubmission(sub)} 
-                        className="action-btn"
-                      >
-                        <Eye size={16} style={{ display: 'inline', marginRight: '4px', verticalAlign: 'middle' }} />
-                        <span>View Offer</span>
-                      </button>
+                    <td style={{ whiteSpace: 'nowrap' }}>
+                      <div style={{ display: 'flex', gap: '0.25rem', alignItems: 'center' }}>
+                        <button 
+                          onClick={() => setSelectedSubmission(sub)} 
+                          className="action-btn"
+                        >
+                          <Eye size={16} />
+                          <span>View Offer</span>
+                        </button>
+                        <button 
+                          onClick={() => handleDeleteSubmission(sub.id, sub.vendor_name)} 
+                          className="delete-btn"
+                          title="Delete Submission"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -552,7 +613,7 @@ export default function AdminDashboard() {
                       {selectedSubmission.vendor_name}
                     </div>
                     <div style={{ fontSize: '0.85rem', color: 'var(--slate-500)' }}>
-                      Submitted: {new Date(selectedSubmission.created_at).toLocaleString()}
+                      Submitted: {formatMYDateTime(selectedSubmission.created_at)}
                     </div>
                   </div>
                 </div>

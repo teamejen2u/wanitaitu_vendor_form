@@ -75,6 +75,18 @@ export const mockDb = {
     });
   },
 
+  // Delete submission
+  async deleteSubmission(id) {
+    console.warn('⚠️ Supabase not configured. Using Mock DB fallback.');
+    await new Promise((resolve) => setTimeout(resolve, 500));
+
+    const submissions = this.getSubmissions();
+    const filtered = submissions.filter(sub => sub.id !== id);
+    localStorage.setItem(this.STORAGE_KEY, JSON.stringify(filtered));
+
+    return { data: null, error: null };
+  },
+
   // Get submissions from localStorage
   getSubmissions() {
     const data = localStorage.getItem(this.STORAGE_KEY);

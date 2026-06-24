@@ -1037,10 +1037,30 @@ header.app-header p {
   padding: 0.5rem 1rem;
   border-radius: var(--radius-sm);
   transition: background-color 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
 }
 
 .action-btn:hover {
   background-color: var(--purple-100);
+}
+
+.delete-btn {
+  background: none;
+  border: none;
+  color: var(--rose-500);
+  cursor: pointer;
+  padding: 0.5rem;
+  border-radius: var(--radius-sm);
+  transition: background-color 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.delete-btn:hover {
+  background-color: var(--rose-100);
 }
 
 /* Detail Modal Styles */
